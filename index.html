@@ -6,41 +6,59 @@
   <title>Plagiarism Checker, Originality Engine</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
-  <!-- Nav -->
+  <!-- ===== NAV ===== -->
   <nav class="nav">
     <div class="logo-lockup">
       <span class="glyph">&#9670;</span>
-      <span class="wordmark">Plagiarism Checker</span>
+      <span class="wordmark font-louize-display text-heading weight-regular no-tracking">Plagiarism Checker</span>
     </div>
     <div class="nav-links">
-      <a href="#check">Check</a>
-      <a href="#corpus">Corpus</a>
-      <a href="#about">About</a>
+      <a href="#check" class="nav-link weight-bold">Check</a>
+      <a href="#corpus" class="nav-link weight-bold">Corpus</a>
+      <a href="#about" class="nav-link weight-bold">About</a>
     </div>
-    <button class="btn-connect" id="nav-upload">Upload</button>
+    <button class="btn-connect nav-link weight-bold" id="nav-upload">Upload</button>
   </nav>
 
-  <!-- Hero -->
-  <header class="hero">
-    <div class="hero-inner">
-      <h1 class="display"><span class="line">Plagiarism</span><span class="ul"></span></h1>
-      <h1 class="display"><span class="line">Checker</span><span class="ul"></span></h1>
-      <h1 class="display"><span class="line">// Engine</span><span class="ul"></span></h1>
-      <h1 class="display"><span class="line">by Swapneel Sethi</span><span class="ul"></span></h1>
-      <p class="subtitle">Compare your writing against reference texts, right here, no server needed for local checks.</p>
-      <button class="btn-explore" id="hero-check">Check a document</button>
-      <p class="caption">Drop or choose a file (.txt, .md, .docx, .pdf) or paste text below, your document never leaves this page.</p>
+  <!-- ===== HERO (PAPER SECTION) ===== -->
+  <section class="paper-section full-bleed">
+    <div class="container" style="max-width: 1200px; display: flex; align-items: center; gap: 64px;">
+      <!-- Content Column -->
+      <div style="flex: 0 0 50%;">
+        <h1 class="masthead-headline font-louize-display text-display weight-regular">Plagiarism</h1>
+        <h1 class="masthead-headline font-louize-display text-display weight-regular">Checker</h1>
+        <h1 class="masthead-headline font-louize-display text-display weight-regular">// Engine</h1>
+        <h1 class="masthead-headline font-louize-display text-display weight-regular">by Swapneel Sethi</h1>
+        <p class="subtitle font-louize text-heading-sm weight-regular">
+          Compare your writing against reference texts, right here, no server needed for local checks.
+        </p>
+        <button class="btn-explore btn-charcoal" id="hero-check">Check a document</button>
+        <p class="caption">
+          Drop or choose a file (.txt, .md, .docx, .pdf) or paste text below — your document never leaves this page.
+        </p>
+      </div>
+      
+      <!-- Halftone Plate Column -->
+      <div class="hero-halftone" style="flex: 0 0 50%; display: flex; align-items: center; justify-content: center;">
+        <div style="width: 200px; height: 200px; background: var(--color-paper); border: 2px dashed var(--color-headline-ink); display: flex; align-items: center; justify-content: center; color: var(--color-headline-ink); font-family: var(--font-neue-montreal); font-size: var(--text-body);">
+          Halftone Plate
+        </div>
+      </div>
     </div>
-  </header>
+  </section>
 
-  <!-- Submit -->
-  <section id="check" class="section">
+  <!-- ===== CHECK SECTION (INK SECTION) ===== -->
+  <section class="ink-section full-bleed">
     <div class="container">
-      <h2 class="heading">Submit</h2>
+      <h2 class="heading font-louize-display text-heading-lg weight-regular">Submit</h2>
+      <p class="caption font-neue-montreal text-body weight-regular">
+        The engine compares your document against the texts below. Add your own or use the defaults.
+      </p>
+      
       <div class="dropzone" id="dropzone">
         <textarea id="input" placeholder="Paste your document here, or drop / choose any file (.txt, .md, .docx, .pdf, …)"></textarea>
         <input type="file" id="file" hidden />
@@ -51,39 +69,51 @@
         <p class="caption" id="charCount">0 characters</p>
       </div>
 
-      <label class="toggle"><input type="checkbox" id="scanWeb" /> <span>Scan the web</span></label>
-      <label class="serp-key"><span>SerpAPI key</span><input type="password" id="serpKey" placeholder="paste key for better web results (optional)" autocomplete="off" /></label>
-      <p class="caption">With web scanning on, the checker looks your text up against live Google results through the backend. On the deployed site the search key is already set up, for local use, paste a SerpAPI key or run <b>node server.js &lt;key&gt;</b>.</p>
+      <label class="toggle">
+        <input type="checkbox" id="scanWeb" />
+        <span>Scan the web</span>
+      </label>
+      <label class="serp-key">
+        <span>SerpAPI key</span>
+        <input type="password" id="serpKey" placeholder="paste key for better web results (optional)" autocomplete="off" />
+      </label>
+      <p class="caption">
+        With web scanning on, the checker looks your text up against live Google results through the backend. On the deployed site the search key is already set up — for local use, paste a SerpAPI key or run <code>node server.js <key></code>.
+      </p>
 
       <div id="report" class="report" hidden></div>
     </div>
   </section>
 
-  <!-- Corpus -->
-  <section id="corpus" class="section">
+  <!-- ===== CORPUS SECTION (PAPER SECTION) ===== -->
+  <section class="paper-section full-bleed">
     <div class="container">
-      <h2 class="heading">Reference corpus</h2>
-      <p class="caption">The engine compares your document against the texts below. Add your own or use the defaults.</p>
-      <div class="corpus-form" style="margin-top:20px;">
+      <h2 class="heading font-louize-display text-heading-lg weight-regular">Reference corpus</h2>
+      <p class="caption font-neue-montreal text-body weight-regular">
+        The engine compares your document against the texts below. Add your own or use the defaults.
+      </p>
+      
+      <div class="corpus-form" style="margin-top: 32px;">
         <input type="text" id="corpusTitle" placeholder="Document title" />
         <textarea id="corpusText" placeholder="Paste a reference document to check against…"></textarea>
-        <div class="dz-actions">
+        <div class="dz-actions" style="margin-top: 16px;">
           <button class="btn-charcoal" id="addCorpus">Add to corpus</button>
           <span class="caption" id="corpusMsg"></span>
         </div>
       </div>
+      
       <ul id="corpusList"></ul>
     </div>
   </section>
 
-  <!-- About -->
-  <section id="about" class="section">
+  <!-- ===== ABOUT SECTION (INK SECTION) ===== -->
+  <section class="ink-section full-bleed">
     <div class="container">
-      <h2 class="heading">About</h2>
-      <p class="subtitle" style="font-size:20px;line-height:1.3;max-width:760px;color:var(--color-ash);">
+      <h2 class="heading font-louize-display text-heading-lg weight-regular">About</h2>
+      <p class="subtitle font-neue-montreal text-body weight-regular" style="max-width: 760px; line-height: 1.6;">
         Here's how it works. The checker slides a 5-word window across your writing and checks each chunk against the reference texts. If a chunk shows up word-for-word, that's a verbatim match. If it's reworded but means the same thing, the engine catches that too with a semantic pass. It also looks for ten signs of AI writing, such as low vocabulary diversity or repetitive word length, to estimate how machine-generated your writing sounds.
       </p>
-      <p class="caption" style="margin-top:20px;">
+      <p class="caption font-neue-montreal text-body weight-regular" style="margin-top: 24px;">
         With web scanning on, it also checks your text against live Google results through the backend. This is a rough heuristic, not a certified plagiarism or AI detector. Think of it as a second pair of eyes, not a court of law.
       </p>
     </div>
