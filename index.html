@@ -4,44 +4,45 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Plagiarism Checker, Originality Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Serif+Pro:wght@400;700&family=Source+Sans+Pro:wght@400;600;700&family=Libre+Franklin:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
   <!-- ===== NAV ===== -->
-  <nav class="nav">
-    <div class="logo-lockup">
+  <nav class="nav flex items-center justify-between">
+    <div class="logo-lockup flex items-center gap-4">
       <span class="glyph">&#9670;</span>
-      <span class="wordmark font-louize-display text-heading weight-regular no-tracking">Plagiarism Checker</span>
+      <span class="wordmark font-playfair-display text-heading font-weight-semibold">Plagiarism Checker</span>
     </div>
-    <div class="nav-links">
-      <a href="#check" class="nav-link weight-bold">Check</a>
-      <a href="#corpus" class="nav-link weight-bold">Corpus</a>
-      <a href="#about" class="nav-link weight-bold">About</a>
+    <div class="nav-links flex gap-8">
+      <a href="#check" class="nav-link">Check</a>
+      <a href="#corpus" class="nav-link">Corpus</a>
+      <a href="#about" class="nav-link">About</a>
     </div>
-    <button class="btn-connect nav-link weight-bold" id="nav-upload">Upload</button>
+    <button class="btn btn-primary" id="nav-upload">Upload</button>
   </nav>
 
   <!-- ===== HERO (PAPER SECTION) ===== -->
   <section class="paper-section full-bleed">
-    <div class="container" style="max-width: 1200px; display: flex; align-items: center; gap: 64px;">
-      <!-- Content Column (2/3 width) -->
-      <div style="flex: 0 0 66.666%; max-width: 66.666%;">
-        <h1 class="masthead-headline font-louize-display text-display weight-regular">Plagiarism</h1>
-        <h1 class="masthead-headline font-louize-display text-display weight-regular">Checker</h1>
-        <h1 class="masthead-headline font-louize-display text-display weight-regular">// Engine</h1>
-        <h1 class="masthead-headline font-louize-display text-display weight-regular">by Swapneel Sethi</h1>
-        <p class="subtitle font-louize text-heading-sm weight-regular">
-          Compare your writing against reference texts, right here, no server needed for local checks.
-        </p>
-        <button class="btn-explore btn-charcoal" id="hero-check">Check a document</button>
+    <div class="container flex flex-col items-center">
+      <!-- Content Column -->
+      <div class="hero-content text-center mb-8">
+        <h1 class="masthead-headline text-display font-weight-bold mb-4">Plagiarism</h1>
+        <h1 class="masthead-headline text-display font-weight-bold mb-4">Checker</h1>
+        <h1 class="masthead-headline text-display font-weight-bold mb-4">// Engine</h1>
+        <h1 class="masthead-headline text-display font-weight-bold mb-4">by Swapneel Sethi</h1>
+        <p class="subtitle text-lg">Compare your writing against reference texts, right here, no server needed for local checks.</p>
+        <button class="btn btn-primary mb-4" id="hero-check">Check a document</button>
         <p class="caption">
           Drop or choose a file (.txt, .md, .docx, .pdf) or paste text below — your document never leaves this page.
         </p>
       </div>
       
-      <!-- Halftone Plate Column (1/3 width) -->
-      <div class="hero-halftone" style="flex: 0 0 33.333%; max-width: 33.333%; display: flex; align-items: center; justify-content: center;">
-        <div style="width: 200px; height: 200px; background: var(--color-paper); border: 2px dashed var(--color-headline-ink); display: flex; align-items: center; justify-content: center; color: var(--color-headline-ink); font-family: var(--font-neue-montreal); font-size: var(--text-body);">
+      <!-- Halftone Plate -->
+      <div class="hero-halftone">
+        <div style="width: 200px; height: 200px; background: var(--color-pearl); border: 2px dashed var(--color-ebony); display: flex; align-items: center; justify-content: center; color: var(--color-ebony); font-family: var(--font-source-sans-pro); font-size: var(--text-body);">
           Halftone Plate
         </div>
       </div>
@@ -50,27 +51,27 @@
 
   <!-- ===== CHECK SECTION (INK SECTION) ===== -->
   <section class="ink-section full-bleed">
-    <div class="container">
-      <h2 class="heading font-louize-display text-heading-lg weight-regular">Submit</h2>
-      <p class="caption font-neue-montreal text-body weight-regular">
+    <div="container">
+      <h2 class="heading text-heading-lg font-weight-semibold mb-6">Submit</h2>
+      <p class="caption text-base mb-6">
         The engine compares your document against the texts below. Add your own or use the defaults.
       </p>
       
       <div class="dropzone" id="dropzone">
         <textarea id="input" placeholder="Paste your document here, or drop / choose any file (.txt, .md, .docx, .pdf, …)"></textarea>
         <input type="file" id="file" hidden />
-        <div class="dz-actions">
-          <button class="btn-charcoal" id="loadFile">Choose file</button>
-          <button class="btn-charcoal" id="analyze">Run analysis</button>
+        <div class="dz-actions flex flex-col gap-4">
+          <button class="btn btn-primary" id="loadFile">Choose file</button>
+          <button class="btn btn-primary" id="analyze">Run analysis</button>
         </div>
         <p class="caption" id="charCount">0 characters</p>
       </div>
 
-      <label class="toggle">
+      <label class="toggle flex items-center gap-3">
         <input type="checkbox" id="scanWeb" />
         <span>Scan the web</span>
       </label>
-      <label class="serp-key">
+      <label class="serp-key flex flex-col gap-2 mb-4">
         <span>SerpAPI key</span>
         <input type="password" id="serpKey" placeholder="paste key for better web results (optional)" autocomplete="off" />
       </label>
@@ -85,16 +86,16 @@
   <!-- ===== CORPUS SECTION (PAPER SECTION) ===== -->
   <section class="paper-section full-bleed">
     <div class="container">
-      <h2 class="heading font-louize-display text-heading-lg weight-regular">Reference corpus</h2>
-      <p class="caption font-neue-montreal text-body weight-regular">
+      <h2 class="heading text-heading-lg font-weight-semibold mb-6">Reference corpus</h2>
+      <p class="caption text-base mb-6">
         The engine compares your document against the texts below. Add your own or use the defaults.
       </p>
       
-      <div class="corpus-form" style="margin-top: 32px;">
-        <input type="text" id="corpusTitle" placeholder="Document title" />
-        <textarea id="corpusText" placeholder="Paste a reference document to check against…"></textarea>
-        <div class="dz-actions" style="margin-top: 16px;">
-          <button class="btn-charcoal" id="addCorpus">Add to corpus</button>
+      <div class="corpus-form" style="margin-top: var(--spacing-32);">
+        <input type="text" id="corpusTitle" placeholder="Document title" class="w-full mb-4" />
+        <textarea id="corpusText" placeholder="Paste a reference document to check against…" class="w-full mb-4"></textarea>
+        <div class="dz-actions flex flex-col gap-4">
+          <button class="btn btn-primary" id="addCorpus">Add to corpus</button>
           <span class="caption" id="corpusMsg"></span>
         </div>
       </div>
@@ -106,11 +107,11 @@
   <!-- ===== ABOUT SECTION (INK SECTION) ===== -->
   <section class="ink-section full-bleed">
     <div class="container">
-      <h2 class="heading font-louize-display text-heading-lg weight-regular">About</h2>
-      <p class="subtitle font-neue-montreal text-body weight-regular" style="max-width: 760px; line-height: 1.6;">
+      <h2 class="heading text-heading-lg font-weight-semibold mb-6">About</h2>
+      <p class="subtitle text-base leading-relaxed mb-6" style="max-width: 760px;">
         Here's how it works. The checker slides a 5-word window across your writing and checks each chunk against the reference texts. If a chunk shows up word-for-word, that's a verbatim match. If it's reworded but means the same thing, the engine catches that too with a semantic pass. It also looks for ten signs of AI writing, such as low vocabulary diversity or repetitive word length, to estimate how machine-generated your writing sounds.
       </p>
-      <p class="caption font-neue-montreal text-body weight-regular" style="margin-top: 24px;">
+      <p class="caption text-sm mb-6">
         With web scanning on, it also checks your text against live Google results through the backend. This is a rough heuristic, not a certified plagiarism or AI detector. Think of it as a second pair of eyes, not a court of law.
       </p>
     </div>
