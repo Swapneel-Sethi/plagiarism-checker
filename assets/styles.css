@@ -624,3 +624,17 @@ textarea {
     --section-gap: 32px;
   }
 }
+
+@media (max-width: 480px) {
+  .masthead-headline.text-display {
+    font-size: 36px;
+    line-height: 1.1;
+  }
+  .subtitle.text-lg {
+    font-size: 16px;
+  }
+  .btn.btn-primary {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}
