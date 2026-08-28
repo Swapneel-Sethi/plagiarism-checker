@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "functions": {
+    "api/web-sources.js": { "maxDuration": 30 },
+    "api/analyze.js": { "maxDuration": 60 }
+  }
+}

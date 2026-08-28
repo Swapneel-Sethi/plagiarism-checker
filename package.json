@@ -1,0 +1,9 @@
+{
+  "name": "plagiarism-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monochrome plagiarism + AI-writing checker (MekaVerse style) with live web scanning.",
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,14 @@
+# secrets / local
+.env
+.env.local
+*.log
+server.log
+
+# deps (none currently, but keep clean if added)
+node_modules/
+
+# os
+.DS_Store
+
+.vercel
+.env*

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plagiarism Checker — Originality Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="logo-lockup">
+      <span class="glyph">&#9670;</span>
+      <span class="wordmark">Plagiarism Checker</span>
+    </div>
+    <div class="nav-links">
+      <a href="#check">Check</a>
+      <a href="#corpus">Corpus</a>
+      <a href="#about">About</a>
+    </div>
+    <button class="btn-connect" id="nav-upload">Upload</button>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-inner">
+      <h1 class="display"><span class="line">Plagiarism</span><span class="ul"></span></h1>
+      <h1 class="display"><span class="line">Checker</span><span class="ul"></span></h1>
+      <h1 class="display"><span class="line">// Engine</span><span class="ul"></span></h1>
+      <h1 class="display"><span class="line">by Swapneel Sethi</span><span class="ul"></span></h1>
+      <p class="subtitle">Compare your writing against reference texts — right here, no server needed for local checks.</p>
+      <button class="btn-explore" id="hero-check">Check a document</button>
+      <p class="caption">Drop or choose a file (.txt, .md, .docx, .pdf) or paste text below — your document never leaves this page.</p>
+    </div>
+  </header>
+
+  <!-- Submit -->
+  <section id="check" class="section">
+    <div class="container">
+      <h2 class="heading">Submit</h2>
+      <div class="dropzone" id="dropzone">
+        <textarea id="input" placeholder="Paste your document here, or drop / choose any file (.txt, .md, .docx, .pdf, …)"></textarea>
+        <input type="file" id="file" hidden />
+        <div class="dz-actions">
+          <button class="btn-charcoal" id="loadFile">Choose file</button>
+          <button class="btn-charcoal" id="analyze">Run analysis</button>
+        </div>
+        <p class="caption" id="charCount">0 characters</p>
+      </div>
+
+      <label class="toggle"><input type="checkbox" id="scanWeb" /> <span>Scan the web</span></label>
+      <label class="serp-key"><span>SerpAPI key</span><input type="password" id="serpKey" placeholder="paste key for better web results (optional)" autocomplete="off" /></label>
+      <p class="caption">With web scanning on, the checker looks your text up against live Google results through the backend. On the deployed site the search key is already set up — for local use, paste a SerpAPI key or run <b>node server.js &lt;key&gt;</b>.</p>
+
+      <div id="report" class="report" hidden></div>
+    </div>
+  </section>
+
+  <!-- Corpus -->
+  <section id="corpus" class="section">
+    <div class="container">
+      <h2 class="heading">Reference corpus</h2>
+      <p class="caption">The engine compares your document against the texts below. Add your own or use the defaults.</p>
+      <div class="corpus-form" style="margin-top:20px;">
+        <input type="text" id="corpusTitle" placeholder="Document title" />
+        <textarea id="corpusText" placeholder="Paste a reference document to check against…"></textarea>
+        <div class="dz-actions">
+          <button class="btn-charcoal" id="addCorpus">Add to corpus</button>
+          <span class="caption" id="corpusMsg"></span>
+        </div>
+      </div>
+      <ul id="corpusList"></ul>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section id="about" class="section">
+    <div class="container">
+      <h2 class="heading">About</h2>
+      <p class="subtitle" style="font-size:20px;line-height:1.3;max-width:760px;color:var(--color-ash);">
+        Here's how it works. The checker slides a 5-word window across your writing and checks each chunk against the reference texts below. If a chunk shows up word-for-word, that's a verbatim match. If it's reworded but means the same thing, the engine catches that too with a semantic pass (TF-IDF cosine similarity). It also runs your prose through ten stylometric dials — burstiness, rare-word ratio, function-word density, boilerplate phrasing, LLM tells, personal-voice absence, repeated n-grams, vocabulary diversity, word length, and punctuation structure — to estimate how machine-generated your writing sounds.
+      </p>
+      <p class="caption" style="margin-top:20px;">
+        With web scanning on, it also checks your text against live Google results through the backend — on the deployed site the search key is already set up. This is a rough heuristic, not a certified plagiarism or AI detector. Think of it as a second pair of eyes, not a court of law.
+      </p>
+    </div>
+  </section>
+
+  <script src="assets/corpus.js"></script>
+  <script src="assets/engine.js"></script>
+  <!-- Document parsers (loaded from CDN; app degrades gracefully if offline) -->
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
