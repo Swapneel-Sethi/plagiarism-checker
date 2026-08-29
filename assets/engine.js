@@ -365,7 +365,9 @@
 
     var contentRatio = content.length / wordCount;
 
-    // Abstract / AI-favored noun density (tell-free AI signal).
+    // Abstract / AI-favored noun density (tell-free AI signal). Weighted at 0.18:
+    // high enough to catch uniform mechanical AI (T5/S5 land ~50) but low enough
+    // that genuine formal-human writing with specifics stays well under the cutoff.
     var absCount = words.filter(function (w) { return AI_NOUNS.has(w); }).length;
     var absDensity = absCount / wordCount * 100;
 
@@ -391,13 +393,14 @@
     // (adding "I/we/my" is what humanizer tools do), so without it the index feels
     // "stuck" when a text is humanized by voice alone. It stays small so formal human
     // text (Gettysburg/Computation) remains below the 50% cutoff.
-    var W = {
+    var CFG = (typeof PE !== 'undefined' ? PE._CFG : null) || null;
+    var W = (CFG && CFG.weights) || {
       'LLM TELL PHRASES': 0.203,
       'HEDGE / BOILERPLATE PHRASES': 0.156,
       'BURSTINESS (sentence-length variance)': 0.125,
       'FUNCTION-WORD DENSITY': 0.094,
       'PERSONAL VOICE ABSENCE': 0.078,
-      'ABSTRACT / AI-NOUN DENSITY': 0.220,
+      'ABSTRACT / AI-NOUN DENSITY': 0.180,
       'TYPE-TOKEN RATIO': 0.055,
       'REPEATED 4-GRAM RATIO': 0.039,
       'COMMA DENSITY': 0.016,
@@ -408,8 +411,8 @@
       var w = W[p.label] || 0;
       if (w) { acc += w * p.score; wsum += w; }
     });
-    var idx = wsum ? (acc / wsum) * 100 : 0;
-    return { index: Math.round(idx), wordCount: wordCount, params: params };
+    var idx = wsum ? Math.round((acc / wsum) * 100) : 0;
+    return { index: idx, wordCount: wordCount, params: params };
   }
 
   // ---------- combined report ----------
