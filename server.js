@@ -24,7 +24,7 @@ const ROOT = __dirname;
 
 // Single source of truth for web scanning — shared with the Vercel function.
 const { webSources } = require('./api/web-sources');
-const { semanticMatches } = require('./api/semantic');
+const { semanticMatches, pickGroqModel, groqChatCompletion } = require('./api/semantic');
 const PE = require('./assets/engine.js');
 const CORPUS = require('./assets/corpus.js');
 
@@ -40,6 +40,9 @@ function loadEnv() {
   } catch (e) { /* ignore */ }
 }
 loadEnv();
+// NOTE: do not hardcode secrets here. Keys are read from .env (GEMINI_KEY,
+// SERPAPI_KEY, GROQ_API_KEY) via loadEnv() above. The old hardcoded Groq key
+// was invalid (HTTP 400) and has been removed.
 if (process.argv[2]) process.env.SERPAPI_KEY = process.argv[2]; // one-step: node server.js YOUR_KEY
 
 const PORT = process.env.PORT || 3000;
@@ -130,6 +133,8 @@ const server = http.createServer(async (req, res) => {
         const pre = PE.analyzePlagiarism(text, sources);
 
         // 3) Semantic (reworded) pass — Gemini embeddings. Best-effort, bounded.
+        // This is what catches reworded/paraphrased plagiarism that the offline
+        // word-matching misses. Enabled whenever GEMINI_KEY is set (via .env).
         let extraSpans = [];
         if (gk) {
           try {
@@ -149,7 +154,35 @@ const server = http.createServer(async (req, res) => {
             notice += (notice ? ' ' : '') + 'Semantic scan skipped (' + (e.message || e) + ').';
           }
         } else {
-          notice += (notice ? ' ' : '') + 'No Gemini key — reworded-text detection disabled.';
+          // Fallback: Groq chat-completion paraphrase scan (only if a Groq key is present)
+          const groqKey = process.env.GROQ_API_KEY;
+          if (groqKey) {
+            try {
+              const model = await pickGroqModel(groqKey);
+              if (model) {
+                const chatRes = await groqChatCompletion(
+                  [
+                    { role: 'system', content: 'You are a plagiarism detection assistant. Identify any paraphrased sentences in the document compared to the list of source passages. Return a JSON array of objects each with start and end character indices (relative to the original document) and the source title.' },
+                    { role: 'user', content: `Document: ${text}\nSources:\n${sources.slice(0,5).map(s=>s.title+': '+s.text.slice(0,200)).join('\n')}` }
+                  ],
+                  groqKey,
+                  model
+                );
+                let spans = [];
+                try {
+                  spans = JSON.parse(chatRes.choices[0].message.content);
+                } catch (_) {}
+                extraSpans = spans;
+                notice += (notice ? ' ' : '') + 'Groq semantic scan attempted.';
+              } else {
+                notice += (notice ? ' ' : '') + 'No suitable Groq model found.';
+              }
+            } catch (e) {
+              notice += (notice ? ' ' : '') + 'Groq scan failed (' + (e.message || e) + ').';
+            }
+          } else {
+            notice += (notice ? ' ' : '') + 'No Gemini/Groq key — reworded-text detection disabled.';
+          }
         }
 
         const rep = PE.fullReport(text, sources, extraSpans);

@@ -1,20 +1,10 @@
 :root {
-  /* Colors - Essie Wine System */
-  --color-wine: #722f37;
-  --color-sand: #e8d8c3;
-  --color-pearl: #f5f5f5;
-  --color-ebony: #000000;
-  --color-ash: #666666;
-  --color-slate: #4a4a4a;
-  --color-mist: #e0e0e0;
-  --color-stone: #b3b3b3;
-  --color-dune: #c2b283;
-  --color-fog: #d6d6d6;
-  --color-chalk: #f0f0f0;
-  --color-foam: #ffffff;
-  --color-ombre: #8b8b8b;
-  --color-haze: #b8b8b8;
-  --color-taupe: #8b6d5c;
+  /* Colors - MekaVerse Tokens */
+  --color-void: #000000;
+  --color-bone: #ffffff;
+  --color-charcoal: #444345;
+  --color-frost: #e2e2e2;
+  --color-ash: #b8bab9;
 
   /* Typography - Font Families */
   --font-playfair-display: 'Playfair Display', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -113,8 +103,8 @@
 
 /* Base styles */
 html, body {
-  background: var(--color-pearl);
-  color: var(--color-ebony);
+  background: var(--color-void);
+  color: var(--color-bone);
   font-family: var(--font-source-sans-pro);
   font-weight: var(--font-weight-regular);
   font-size: var(--text-body);
@@ -124,15 +114,15 @@ html, body {
 
 /* ---------- Layout Containers ---------- */
 .paper-section {
-  background: var(--color-pearl);
-  color: var(--color-ebony);
+  background: var(--color-void);
+  color: var(--color-bone);
   padding: var(--spacing-64) var(--spacing-32);
   position: relative;
 }
 
 .ink-section {
-  background: var(--color-ebony);
-  color: var(--color-pearl);
+  background: var(--color-void);
+  color: var(--color-bone);
   padding: var(--spacing-64) var(--spacing-32);
   position: relative;
 }
@@ -177,7 +167,7 @@ html, body {
   font-weight: var(--font-weight-regular);
   line-height: var(--leading-display);
   letter-spacing: var(--tracking-display);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 /* Stamped Display Section Header */
@@ -190,8 +180,8 @@ html, body {
 
 /* Inverted Editorial Letter */
 .inverted-editorial {
-  background: var(--color-ebony);
-  color: var(--color-pearl);
+  background: var(--color-void);
+  color: var(--color-bone);
   padding: var(--spacing-64);
 }
 
@@ -201,7 +191,7 @@ html, body {
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking-sm);
-  color: var(--color-pearl);
+  color: var(--color-bone);
   opacity: 0.6;
 }
 
@@ -210,7 +200,7 @@ html, body {
   font-size: var(--text-lg);
   font-weight: var(--font-weight-regular);
   line-height: var(--leading-lg);
-  color: var(--color-pearl);
+  color: var(--color-bone);
   text-align: center;
 }
 
@@ -221,7 +211,7 @@ html, body {
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-body);
-  color: var(--color-ebony);
+  color: var(--color-bone);
   text-decoration: none;
 }
 
@@ -238,7 +228,7 @@ html, body {
 
 /* Brand Ticker Strip */
 .brand-ticker {
-  background: var(--color-ebony);
+  background: var(--color-void);
   overflow: hidden;
   white-space: nowrap;
 }
@@ -247,7 +237,7 @@ html, body {
   font-family: var(--font-playfair-display);
   font-size: var(--text-heading);
   font-weight: var(--font-weight-regular);
-  color: var(--color-pearl);
+  color: var(--color-bone);
   margin-right: var(--spacing-24);
   display: inline-block;
 }
@@ -259,7 +249,7 @@ html, body {
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking-sm);
-  color: var(--color-pearl);
+  color: var(--color-bone);
   border: 1px solid var(--color-pearl);
   border-radius: var(--radius-sm);
   padding: var(--spacing-4) var(--spacing-8);
@@ -276,7 +266,7 @@ html, body {
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking-sm);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 /* Footnotes / Meta Line */
@@ -286,7 +276,7 @@ html, body {
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking-sm);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 /* ---------- Forms and Inputs ---------- */
@@ -296,7 +286,7 @@ select {
   font-family: var(--font-source-sans-pro);
   font-size: var(--text-body);
   font-weight: var(--font-weight-regular);
-  color: var(--color-ebony);
+  color: var(--color-bone);
   background: var(--color-foam);
   border: 1px solid var(--color-mist);
   border-radius: var(--radius-sm);
@@ -336,29 +326,29 @@ textarea {
 
 .btn-primary:hover {
   background: var(--color-sand);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 .btn-secondary {
   background: var(--color-foam);
-  color: var(--color-ebony);
+  color: var(--color-bone);
   border: 1px solid var(--color-mist);
 }
 
 .btn-secondary:hover {
   background: var(--color-mist);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--color-ebony);
+  color: var(--color-bone);
   border: 1px solid var(--color-mist);
 }
 
 .btn-outline:hover {
   background: var(--color-mist);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 /* ---------- Utility Classes ---------- */
@@ -405,12 +395,12 @@ textarea {
 .hero-halftone > div {
   width: 200px;
   height: 200px;
-  background: var(--color-pearl);
+  background: var(--color-void);
   border: 2px dashed var(--color-ebony);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-ebony);
+  color: var(--color-bone);
   font-family: var(--font-source-sans-pro);
   font-size: var(--text-body);
 }
@@ -419,7 +409,7 @@ textarea {
 #check .container,
 #corpus .container,
 #about .container {
-  background: var(--color-pearl);
+  background: var(--color-void);
   border: 2px solid var(--color-ebony);
   border-radius: var(--radius-lg);
   padding: var(--spacing-32);
@@ -450,7 +440,7 @@ textarea {
 .btn-charcoal:hover,
 .btn-mini:hover {
   background: var(--color-sand);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 /* Metrics and Reports */
@@ -554,7 +544,7 @@ textarea {
   font-family: var(--font-source-sans-pro);
   font-size: var(--text-body);
   font-weight: var(--font-weight-regular);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 /* SerpAPI Key Input */
@@ -571,7 +561,7 @@ textarea {
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking-sm);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 .serp-key input {
@@ -595,7 +585,7 @@ textarea {
   font-size: var(--text-sm);
   font-weight: var(--font-weight-regular);
   line-height: var(--leading-sm);
-  color: var(--color-ebony);
+  color: var(--color-bone);
 }
 
 .disclaimer {

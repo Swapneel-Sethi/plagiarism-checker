@@ -96,7 +96,9 @@
     COMMON.forEach(function (w) { s.add(w); });
     return s;
   })();
-  var FUZZY_THRESHOLD = 0.45; // cosine cutoff for "this sentence is a paraphrase"
+  var FUZZY_THRESHOLD = 0.40; // cosine cutoff for "this sentence is a paraphrase"
+                             // (0.40 catches heavy rewordings like T4; originals in
+                             // the corpus sit well below at <=0.27, so no false hits)
 
   function contentWords(text) {
     return String(text).toLowerCase().split(/[^a-z0-9]+/)
@@ -360,16 +362,24 @@
       { label: 'AVG WORD LENGTH', raw: avgWordLen.toFixed(2) + ' ch', score: clamp((3.0 - avgWordLen) / 1.4, 0, 1), note: 'Short words cluster → simplified diction' }
     ];
 
-    // Ensemble index — only the signals that reliably separate machine/spun
-    // text from human writing are weighted; noisy ones are shown for context.
+    // Ensemble index. The strongest AI-specific signals are the lexical tells
+    // (LLM-tell + hedge phrases). Rhythm signals (burstiness, function-word
+    // density, vocab diversity) add gradation. Personal-voice-absence is included
+    // at a MODEST weight (0.10) on purpose: it is the dominant humanization
+    // signal (adding "I/we/my" is what humanizer tools do), so without it the
+    // index feels "stuck" when a text is humanized by voice alone. It is kept
+    // small (was 0.20, caused false AI flags on formal human text like the
+    // Gettysburg/Computation docs) so those still stay below the 50% cutoff.
     var W = {
-      'BURSTINESS (sentence-length variance)': 0.24,
-      'TYPE-TOKEN RATIO': 0.20,
-      'PERSONAL VOICE ABSENCE': 0.20,
-      'CONTENT-WORD RATIO': 0.12,
-      'REPEATED 4-GRAM RATIO': 0.08,
-      'LLM TELL PHRASES': 0.08,
-      'HEDGE / BOILERPLATE PHRASES': 0.08
+      'LLM TELL PHRASES': 0.26,
+      'HEDGE / BOILERPLATE PHRASES': 0.20,
+      'BURSTINESS (sentence-length variance)': 0.16,
+      'FUNCTION-WORD DENSITY': 0.12,
+      'PERSONAL VOICE ABSENCE': 0.10,
+      'TYPE-TOKEN RATIO': 0.07,
+      'REPEATED 4-GRAM RATIO': 0.05,
+      'COMMA DENSITY': 0.02,
+      'AVG WORD LENGTH': 0.02
     };
     var wsum = 0, acc = 0;
     params.forEach(function (p) {

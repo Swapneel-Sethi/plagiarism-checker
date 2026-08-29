@@ -76,6 +76,67 @@ function splitSourcePassages(text) {
 }
 
 // Fail-fast embed of a single text. Throws on persistent quota/network failure
+// --- Groq fallback helpers start ---
+async function pickGroqModel(key) {
+  const resp = await fetch('https://api.groq.com/openai/v1/models', {
+    headers: { Authorization: `Bearer ${key}` }
+  });
+  if (!resp.ok) throw new Error('Groq model list fetch failed');
+  const data = await resp.json();
+  const candidate = data.data.find(m => !m.id.includes('guard') && !m.id.includes('whisper'));
+  return candidate ? candidate.id : null;
+}
+
+async function groqChatCompletion(messages, key, model) {
+  const payload = { model, messages, max_tokens: 500 };
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!resp.ok) throw new Error('Groq chat failed: ' + resp.status);
+  return await resp.json();
+}
+// --- Groq fallback helpers end ---
+
+// --- OpenAI-compatible embedding (opencode / Groq / any /v1 embeddings) ---
+// Used as a fallback when Gemini's quota is exhausted. `baseUrl` is the
+// provider's /v1 root (e.g. https://api.groq.com/openai/v1). Returns [] on
+// any failure so the caller can try the next provider in the chain.
+async function embedOneOpenAI(text, key, baseUrl, model) {
+  const url = (baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '') + '/embeddings';
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({ input: text, model: model })
+    });
+    if (!resp.ok) {
+      const e = await resp.text().catch(function () { return ''; });
+      process.stderr.write('OPENAI EMBED ERR ' + resp.status + ' ' + e.slice(0, 160) + '\n');
+      return [];
+    }
+    const j = await resp.json();
+    const vals = j.data && j.data[0] && j.data[0].embedding;
+    return vals ? vals : [];
+  } catch (err) {
+    process.stderr.write('OPENAI EMBED FAIL ' + (err && err.message) + '\n');
+    return [];
+  }
+}
+async function embedTextsOpenAI(texts, key, baseUrl, model) {
+  const CONC = 8;
+  const out = new Array(texts.length);
+  for (let i = 0; i < texts.length; i += CONC) {
+    const slice = texts.slice(i, i + CONC);
+    const res = await Promise.all(slice.map(function (t) { return embedOneOpenAI(t, key, baseUrl, model); }));
+    for (let k = 0; k < res.length; k++) out[i + k] = res[k];
+  }
+  return out;
+}
 // so the caller can abort the whole pass quickly instead of grinding.
 async function embedOne(text, key) {
   const tries = 2;
@@ -137,53 +198,75 @@ async function semanticMatches(text, sources, key, skipRanges) {
   if (docSents.length > DOC_CAP) docSents = docSents.slice(0, DOC_CAP);
   if (!docSents.length) return result;
 
-  // The entire embedding + comparison block is best-effort. Any quota/network
-  // failure aborts the pass (no semantic spans) so it never delays the report.
-  try {
-    const docVecs = await embedTexts(docSents.map(function (s) { return s.text; }), key);
-    const docNorms = docVecs.map(norm);
+  // Provider fallback chain for embeddings. Gemini is primary; if its quota is
+  // exhausted we fall back to an OpenAI-compatible endpoint (opencode key, via
+  // OPENAI_BASE_URL) and then to Groq — each using a free embedding model. The
+  // whole pass is best-effort: if every provider fails, we return no semantic
+  // spans so it never delays the report.
+  const providers = [];
+  if (key) providers.push({ name: 'gemini', embed: function (ts) { return embedTexts(ts, key); } });
+  if (process.env.OPENAI_BASE_URL && process.env.OPENAI_API_KEY)
+    providers.push({ name: 'openai', embed: function (ts) { return embedTextsOpenAI(ts, process.env.OPENAI_API_KEY, process.env.OPENAI_BASE_URL, process.env.OPENAI_EMBED_MODEL || 'text-embedding-3-small'); } });
+  if (process.env.GROQ_API_KEY)
+    providers.push({ name: 'groq', embed: function (ts) { return embedTextsOpenAI(ts, process.env.GROQ_API_KEY, 'https://api.groq.com/openai/v1', process.env.GROQ_EMBED_MODEL || 'all-MiniLM-L6-v2'); } });
 
-    // Flatten source passages into comparable items (cache stable corpus docs).
-    const items = [];
-    for (let si = 0; si < sources.length; si++) {
-      const s = sources[si];
-      const cacheKey = s.id || s.url || ('t' + hash(s.text || ''));
-      let entry = s.id ? cache.get(cacheKey) : null;
-      if (!entry) {
-        const passages = splitSourcePassages(s.text || '');
-        const vecs = passages.length ? await embedTexts(passages, key) : [];
-        entry = { title: s.title, vecs: vecs };
-        if (s.id) cache.set(cacheKey, entry);
-      }
-      for (let p = 0; p < entry.vecs.length; p++) {
-        if (!entry.vecs[p].length) continue;
-        items.push({ title: entry.title, vec: entry.vecs[p], n: norm(entry.vecs[p]) });
-      }
-    }
-    if (!items.length) return result;
+  if (!providers.length) return result;
 
-    for (let d = 0; d < docSents.length; d++) {
-      const a = docVecs[d];
-      if (!a.length) continue;
-      let best = 0, bestTitle = null;
-      for (let k = 0; k < items.length; k++) {
-        const b = items[k].vec;
-        let dot = 0;
-        for (let x = 0; x < a.length; x++) dot += a[x] * b[x];
-        const sim = dot / (docNorms[d] * items[k].n);
-        if (sim > best) { best = sim; bestTitle = items[k].title; }
+  let embedded = null;
+  for (let pi = 0; pi < providers.length && !embedded; pi++) {
+    const p = providers[pi];
+    try {
+      const docVecs = await p.embed(docSents.map(function (s) { return s.text; }));
+      if (!docVecs.length || !docVecs[0].length) throw new Error('empty embeddings');
+      const docNorms = docVecs.map(norm);
+
+      // Flatten source passages into comparable items (cache stable corpus docs,
+      // keyed by provider so vectors from different models never mix).
+      const items = [];
+      for (let si = 0; si < sources.length; si++) {
+        const s = sources[si];
+        const cacheKey = p.name + ':' + (s.id || s.url || ('t' + hash(s.text || '')));
+        let entry = s.id ? cache.get(cacheKey) : null;
+        if (!entry) {
+          const passages = splitSourcePassages(s.text || '');
+          const vecs = passages.length ? await p.embed(passages) : [];
+          entry = { title: s.title, vecs: vecs };
+          if (s.id) cache.set(cacheKey, entry);
+        }
+        for (let q = 0; q < entry.vecs.length; q++) {
+          if (!entry.vecs[q].length) continue;
+          items.push({ title: entry.title, vec: entry.vecs[q], n: norm(entry.vecs[q]) });
+        }
       }
-      if (best >= SEMANTIC_THRESHOLD) {
-        result.spans.push({ start: docSents[d].start, end: docSents[d].end, title: bestTitle });
-        result.perSource[bestTitle] = (result.perSource[bestTitle] || 0) + 1;
-      }
+      if (!items.length) throw new Error('no source vectors');
+      embedded = { docVecs: docVecs, docNorms: docNorms, items: items, provider: p.name };
+    } catch (e) {
+      process.stderr.write('semantic provider ' + p.name + ' failed: ' + (e && e.message) + '\n');
     }
-  } catch (e) {
-    // Quota/network exhausted — degrade gracefully, no semantic spans.
-    return result;
+  }
+  if (!embedded) return result;
+
+  const docVecs = embedded.docVecs, docNorms = embedded.docNorms, items = embedded.items;
+
+  for (let d = 0; d < docSents.length; d++) {
+    const a = docVecs[d];
+    if (!a.length) continue;
+    let best = 0, bestTitle = null;
+    for (let k = 0; k < items.length; k++) {
+      const b = items[k].vec;
+      let dot = 0;
+      for (let x = 0; x < a.length; x++) dot += a[x] * b[x];
+      const sim = dot / (docNorms[d] * items[k].n);
+      if (sim > best) { best = sim; bestTitle = items[k].title; }
+    }
+    if (best >= SEMANTIC_THRESHOLD) {
+      result.spans.push({ start: docSents[d].start, end: docSents[d].end, title: bestTitle });
+      result.perSource[bestTitle] = (result.perSource[bestTitle] || 0) + 1;
+    }
   }
 
   result.coveragePct = (result.spans.length / docSents.length) * 100;
+  result.provider = embedded.provider;
   return result;
 }
 
@@ -192,3 +275,7 @@ module.exports = {
   setThreshold: function (t) { if (typeof t === 'number') SEMANTIC_THRESHOLD = t; },
   _threshold: function () { return SEMANTIC_THRESHOLD; }
 };
+
+// Export Groq helpers for fallback use
+module.exports.pickGroqModel = pickGroqModel;
+module.exports.groqChatCompletion = groqChatCompletion;

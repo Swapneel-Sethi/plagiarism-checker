@@ -67,6 +67,30 @@
       </p>
 
       <div id="report" class="report" hidden></div>
+<div id="staticReport" class="report">
+  <h3 class="heading-sm">Matched sources</h3>
+  <p class="caption">No overlap with reference corpus</p>
+  <p class="caption disclaimer">Verbatim = word-for-word match. Paraphrase = reworded text sharing the source’s vocabulary (TF‑IDF cosine ≥ 0.50). Plagiarism % = share of the document covered by either. Heavily reworded paraphrase can still read as original.</p>
+  <h3 class="heading-sm">Stylometric parameters</h3>
+  <table class="stylometric-table">
+    <thead>
+      <tr><th>Parameter</th><th>Value</th><th>Note</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>BURSTINESS (sentence-length variance)</td><td>0.56</td><td>Low variance → machine-like uniformity</td></tr>
+      <tr><td>TYPE‑TOKEN RATIO</td><td>17.8%</td><td>Low diversity → repetitive / spun vocabulary</td></tr>
+      <tr><td>PERSONAL VOICE ABSENCE</td><td>0.15 /100w</td><td>Few "I/we" → impersonal, model‑like framing</td></tr>
+      <tr><td>CONTENT‑WORD RATIO</td><td>82.2%</td><td>Few glue words → staccato, non‑human rhythm</td></tr>
+      <tr><td>REPEATED 4‑GRAM RATIO</td><td>1.7%</td><td>Recurring phrasing → low lexical entropy</td></tr>
+      <tr><td>LLM TELL PHRASES</td><td>0.09 /100w</td><td>"delve", "tapestry", "realm", "crucial role"…</td></tr>
+      <tr><td>HEDGE / BOILERPLATE PHRASES</td><td>0.09 /100w</td><td>"it is important to note", "plays a role", etc.</td></tr>
+      <tr><td>FUNCTION‑WORD DENSITY</td><td>34.3%</td><td>Low connective load → over‑dense phrasing</td></tr>
+      <tr><td>COMMA DENSITY</td><td>6.0 /100w</td><td>Very high → over‑structured sentences</td></tr>
+      <tr><td>AVG WORD LENGTH</td><td>5.70 ch</td><td>Short words cluster → simplified diction</td></tr>
+    </tbody>
+  </table>
+  <p class="caption disclaimer">Heuristic engine. Web matches come from live Google results. The AI‑writing index is a rough estimate, not a certified detector. Plagiarism = copied from a source; AI‑writing = machine‑generated or spun. Spun text can read ~0% plagiarism yet score high on AI‑writing.</p>
+</div>
     </div>
   </section>
 
