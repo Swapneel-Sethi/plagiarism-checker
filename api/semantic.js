@@ -171,7 +171,7 @@ async function groqChatSemantic(docSents, sources, key) {
   }
   if (!passages.length) return out;
 
-  const CHUNK = 8, CONC = 2, TOP = 5;
+  const CHUNK = 12, CONC = 2, TOP = 5;
   const chunks = [];
   for (let i = 0; i < docSents.length; i += CHUNK) chunks.push(docSents.slice(i, i + CHUNK));
 

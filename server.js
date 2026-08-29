@@ -70,7 +70,7 @@ function safeJson(body) {
   try { return JSON.parse(body || '{}'); } catch (e) { return {}; }
 }
 const WEB_MS = 18000;
-const SEMANTIC_MS = 25000;
+const SEMANTIC_MS = 60000;
 
 // ---------- request router ----------
 const server = http.createServer(async (req, res) => {

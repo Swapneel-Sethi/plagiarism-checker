@@ -1,0 +1,22 @@
+=== PLAGIARISM TEST TEXT (expect: HIGH plagiarism %, any AI %) ===
+(Reworded from public encyclopedic articles on black holes and climate change.
+ Paste into the tool; the web scan should fetch the original and the semantic
+ pass should flag these as reworded copies.)
+
+A black hole is a region of space where the pull of gravity becomes so overwhelming that not even light can escape from within it. The outer boundary of this region is known as the event horizon, and anything that crosses it is effectively lost to the outside universe. These objects come into being when the core of a very massive star exhausts its nuclear fuel and collapses under its own weight. The result is a point of extraordinary density surrounded by a region from which escape is impossible.
+
+Although nothing can travel back out once it has crossed the horizon, black holes are not simply empty voids. They interact strongly with their surroundings, drawing in gas and dust from neighboring stars. As this material spirals inward, friction heats it to extreme temperatures, causing it to glow brightly in X-rays before it disappears. Astronomers detect these objects not by seeing them directly but by observing the violent effects they have on nearby matter and light.
+
+At the centers of most large galaxies, including our own Milky Way, sit supermassive black holes with masses equivalent to millions or even billions of suns. These giants grew over cosmic time by consuming gas and by merging with other holes. Their presence shapes the motion of stars in the galactic core and influences how the galaxy as a whole evolves. The first direct image of such an object, released in 2019, was produced by linking radio telescopes across the planet into a single Earth-sized instrument.
+
+According to current theory, black holes are not truly permanent. A subtle quantum effect allows them to emit a faint trickle of radiation and very slowly lose mass. Over timescales far longer than the present age of the universe, an isolated hole would eventually evaporate. This prediction remains unobserved in practice, but it connects the physics of the very small with the physics of the most extreme objects in the cosmos.
+
+Turning to the planet, the climate of the Earth is determined by the balance between the energy received from the sun and the energy radiated back into space. Certain gases in the atmosphere, chief among them carbon dioxide and methane, trap some of this outgoing heat. This natural greenhouse effect keeps the surface warm enough for liquid water and life. Without it, the world would be a frozen and barren place.
+
+Human activities have substantially increased the concentration of these heat-trapping gases. The burning of coal, oil, and natural gas releases carbon that had been locked away in the ground for hundreds of millions of years. Deforestation removes trees that would otherwise absorb carbon dioxide. As a result, the atmosphere now holds more of these gases than at any point in at least the last eight hundred thousand years. The additional trapping of heat has raised the average surface temperature of the planet.
+
+The consequences of this warming are widespread. Ice sheets and glaciers are melting, contributing to a gradual rise in sea level that threatens low-lying coasts and islands. Ocean water expands as it warms, adding further to the rise. Weather patterns are shifting, making droughts, heat waves, and heavy rainfall more frequent and more intense in many regions. Coral reefs, sensitive to temperature, suffer bleaching when waters grow too warm.
+
+Scientists are highly confident that recent warming is principally driven by human emissions. This conclusion rests on multiple independent lines of evidence, from the pattern of temperature change to the measurable rise in atmospheric carbon. International agreements aim to limit the increase in global temperature by reducing emissions and by protecting the natural systems that store carbon. The scale of the required transition is large, but the underlying physics is well established.
+
+Both black holes and the warming climate illustrate a common theme in science: the behavior of the very large is governed by principles that are simple to state yet profound in their consequences. In each case, patient observation combined with theory has revealed processes that were once invisible. Continued study remains essential, because our understanding, though powerful, is always subject to refinement as new measurements arrive.
