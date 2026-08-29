@@ -111,9 +111,14 @@
     COMMON.forEach(function (w) { s.add(w); });
     return s;
   })();
-  var FUZZY_THRESHOLD = 0.40; // cosine cutoff for "this sentence is a paraphrase"
-                             // (0.40 catches heavy rewordings like T4; originals in
-                             // the corpus sit well below at <=0.27, so no false hits)
+  var FUZZY_THRESHOLD = 0.30; // cosine cutoff for "this sentence is a paraphrase".
+                             // Lowered from 0.40: the semantic (Gemini) pass is the
+                             // primary reworded-text detector but is flaky (external
+                             // key/outage), so fuzzy must still catch moderately
+                             // reworded copies on its own. 0.30 sits above the corpus
+                             // originals (<=0.27) so it does not false-flag local matches,
+                             // while catching web paraphrases that previously fell in
+                             // the 0.30-0.40 gap (e.g. reworded "Black hole" text).
 
   function contentWords(text) {
     return String(text).toLowerCase().split(/[^a-z0-9]+/)

@@ -197,6 +197,24 @@ async function webSources(text, apiKey) {
     }
   }
 
+  // Broad canonical query: the diverse-query picker above can crowd out the
+  // GENERAL article on a single-topic doc (e.g. landing on "Supermassive black
+  // hole" instead of "Black hole"), which then misses the actual match. Find the
+  // most repeated non-stopword 2-word phrase in the document and search it — this
+  // reliably fetches the canonical article ("black hole" -> "Black hole"). It only
+  // ever ADDS a source, so it cannot hurt precision; a source only contributes if
+  // its text actually overlaps the submission.
+  var grams = {};
+  var toks = text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  for (var gi = 0; gi + 1 < toks.length; gi++) {
+    var w1 = toks[gi], w2 = toks[gi + 1];
+    if (w1.length < 3 || w2.length < 3 || STOP.has(w1) || STOP.has(w2)) continue;
+    var bg = w1 + ' ' + w2;
+    grams[bg] = (grams[bg] || 0) + 1;
+  }
+  var topPhrase = Object.keys(grams).sort(function (a, b) { return grams[b] - grams[a]; })[0];
+  if (topPhrase && picked.indexOf(topPhrase) === -1) picked.unshift(topPhrase);
+
   // 1) Wikipedia — parallel search then parallel extract. Fast, free, reliable.
   const searchResults = await Promise.all(picked.map(function (q) { return wikiSearch(q, 3); }));
   const titles = [];
