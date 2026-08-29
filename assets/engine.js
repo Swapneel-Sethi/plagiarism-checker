@@ -86,6 +86,21 @@
     'it is essential to', 'a myriad of', 'the landscape of', 'at its core', 'it is worth', 'crucial role'
   ];
 
+  // Abstract / AI-favored noun vocabulary. AI output overuses vague, high-level
+  // nouns (model, process, data, framework, leverage, optimize, robust, scalable…)
+  // and underuses concrete specifics. Density of these is a strong, tell-free AI
+  // signal — it catches uniform mechanical AI (e.g. T5) that has no "delve/tapestry"
+  // tells. Kept distinct from LLM_TELLS (which are phrase-level).
+  var AI_NOUNS = new Set((
+    'model models process processes data training parameter parameters deployment infrastructure ' +
+    'algorithm algorithms network networks learning layer layers efficiency scalability performance ' +
+    'quality error errors input inputs output outputs system systems framework frameworks ' +
+    'leverage utilize utilise optimize optimise optimisation robustness robust scalable scalability ' +
+    'seamless holistic synergy synergistic actionable insight insights capability capabilities ' +
+    'functionality methodology methodologies implementation integration ecosystem paradigm ' +
+    'landscape comprehensive strategy strategic solution solutions facilitate'
+  ).split(/\s+/).filter(Boolean));
+
   // ---------- fuzzy (paraphrase) detection ----------
   // Verbatim 5-gram matching misses reworded copies. This layer compares every
   // document sentence to every source sentence with TF-IDF cosine similarity and
@@ -349,6 +364,11 @@
     var firstPersonPer100 = fp / (wordCount / 100);
 
     var contentRatio = content.length / wordCount;
+
+    // Abstract / AI-favored noun density (tell-free AI signal).
+    var absCount = words.filter(function (w) { return AI_NOUNS.has(w); }).length;
+    var absDensity = absCount / wordCount * 100;
+
     var params = [
       { label: 'BURSTINESS (sentence-length variance)', raw: burst.toFixed(2), score: clamp((0.85 - burst) / 0.55, 0, 1), note: 'Low variance → machine-like uniformity' },
       { label: 'TYPE-TOKEN RATIO', raw: (ttr * 100).toFixed(1) + '%', score: clamp((0.52 - ttr) / 0.35, 0, 1), note: 'Low diversity → repetitive / spun vocabulary' },
@@ -358,28 +378,30 @@
       { label: 'LLM TELL PHRASES', raw: tellPer100.toFixed(2) + ' /100w', score: clamp(tellPer100 / 2, 0, 1), note: '"delve", "tapestry", "realm", "crucial role"…' },
       { label: 'HEDGE / BOILERPLATE PHRASES', raw: hedgePer100.toFixed(2) + ' /100w', score: clamp(hedgePer100 / 2, 0, 1), note: '"it is important to note", "plays a role", etc.' },
       { label: 'FUNCTION-WORD DENSITY', raw: (funcDensity * 100).toFixed(1) + '%', score: clamp((0.45 - funcDensity) / 0.15, 0, 1), note: 'Low connective load → over-dense phrasing' },
+      { label: 'ABSTRACT / AI-NOUN DENSITY', raw: absDensity.toFixed(1) + ' /100w', score: clamp(absDensity / 20, 0, 1), note: 'Overuse of vague abstract nouns → AI-style vagueness' },
       { label: 'COMMA DENSITY', raw: commaDensity.toFixed(1) + ' /100w', score: clamp((commaDensity - 10) / 12, 0, 1), note: 'Very high → over-structured sentences' },
       { label: 'AVG WORD LENGTH', raw: avgWordLen.toFixed(2) + ' ch', score: clamp((3.0 - avgWordLen) / 1.4, 0, 1), note: 'Short words cluster → simplified diction' }
     ];
 
-    // Ensemble index. The strongest AI-specific signals are the lexical tells
-    // (LLM-tell + hedge phrases). Rhythm signals (burstiness, function-word
-    // density, vocab diversity) add gradation. Personal-voice-absence is included
-    // at a MODEST weight (0.10) on purpose: it is the dominant humanization
-    // signal (adding "I/we/my" is what humanizer tools do), so without it the
-    // index feels "stuck" when a text is humanized by voice alone. It is kept
-    // small (was 0.20, caused false AI flags on formal human text like the
-    // Gettysburg/Computation docs) so those still stay below the 50% cutoff.
+    // Ensemble index. AI-specific lexical tells (LLM-tell + hedge phrases) lead,
+    // backed by abstract-noun density (a strong tell-FREE signal — catches uniform
+    // mechanical AI like T5 that has no "delve/tapestry" tells) and rhythm signals
+    // (burstiness, function-word density, vocab diversity). Personal-voice-absence
+    // is a MODEST weight (0.078) on purpose: it is the dominant humanization signal
+    // (adding "I/we/my" is what humanizer tools do), so without it the index feels
+    // "stuck" when a text is humanized by voice alone. It stays small so formal human
+    // text (Gettysburg/Computation) remains below the 50% cutoff.
     var W = {
-      'LLM TELL PHRASES': 0.26,
-      'HEDGE / BOILERPLATE PHRASES': 0.20,
-      'BURSTINESS (sentence-length variance)': 0.16,
-      'FUNCTION-WORD DENSITY': 0.12,
-      'PERSONAL VOICE ABSENCE': 0.10,
-      'TYPE-TOKEN RATIO': 0.07,
-      'REPEATED 4-GRAM RATIO': 0.05,
-      'COMMA DENSITY': 0.02,
-      'AVG WORD LENGTH': 0.02
+      'LLM TELL PHRASES': 0.203,
+      'HEDGE / BOILERPLATE PHRASES': 0.156,
+      'BURSTINESS (sentence-length variance)': 0.125,
+      'FUNCTION-WORD DENSITY': 0.094,
+      'PERSONAL VOICE ABSENCE': 0.078,
+      'ABSTRACT / AI-NOUN DENSITY': 0.220,
+      'TYPE-TOKEN RATIO': 0.055,
+      'REPEATED 4-GRAM RATIO': 0.039,
+      'COMMA DENSITY': 0.016,
+      'AVG WORD LENGTH': 0.016
     };
     var wsum = 0, acc = 0;
     params.forEach(function (p) {

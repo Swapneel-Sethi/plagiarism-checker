@@ -80,9 +80,13 @@ module.exports = async function handler(req, res) {
           const semCount = Object.keys(sem.perSource || {}).length;
           if (semCount) {
             notice += (notice ? ' ' : '') + 'Semantic scan flagged ' + sem.spans.length +
-              ' reworded sentence(s) across ' + semCount + ' source(s).';
+              ' reworded sentence(s) across ' + semCount + ' source(s) [provider: ' + (sem.provider || '?') + '].';
+          } else if (sem.status === 'unavailable') {
+            notice += (notice ? ' ' : '') + 'Semantic (reworded-text) scan is unavailable: ' +
+              (sem.reason || 'embedding provider failed') + '. Falling back to exact/fuzzy matching only.';
           } else {
-            notice += (notice ? ' ' : '') + 'Semantic scan found no reworded matches (Gemini quota may be exhausted).';
+            notice += (notice ? ' ' : '') + 'Semantic scan ran (' + (sem.provider || '?') +
+              ') and found no reworded matches.';
           }
         } catch (e) {
           notice += (notice ? ' ' : '') + 'Semantic scan skipped (' + (e.message || e) + ').';

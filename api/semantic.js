@@ -184,7 +184,7 @@ async function embedTexts(texts, key) {
 function norm(v) { let n = 0; for (let i = 0; i < v.length; i++) n += v[i] * v[i]; return Math.sqrt(n) || 1; }
 
 async function semanticMatches(text, sources, key, skipRanges) {
-  const result = { spans: [], perSource: {}, coveragePct: 0 };
+  const result = { spans: [], perSource: {}, coveragePct: 0, status: 'ok', provider: null };
   if (!key || !sources || !sources.length) return result;
 
   let docSents = splitSentencesWithBounds(text)
@@ -210,7 +210,11 @@ async function semanticMatches(text, sources, key, skipRanges) {
   if (process.env.GROQ_API_KEY)
     providers.push({ name: 'groq', embed: function (ts) { return embedTextsOpenAI(ts, process.env.GROQ_API_KEY, 'https://api.groq.com/openai/v1', process.env.GROQ_EMBED_MODEL || 'all-MiniLM-L6-v2'); } });
 
-  if (!providers.length) return result;
+  if (!providers.length) {
+    result.status = 'unavailable';
+    result.reason = 'no embedding provider configured';
+    return result;
+  }
 
   let embedded = null;
   for (let pi = 0; pi < providers.length && !embedded; pi++) {
@@ -244,7 +248,11 @@ async function semanticMatches(text, sources, key, skipRanges) {
       process.stderr.write('semantic provider ' + p.name + ' failed: ' + (e && e.message) + '\n');
     }
   }
-  if (!embedded) return result;
+  if (!embedded) {
+    result.status = 'unavailable';
+    result.reason = 'all embedding providers failed (check GEMINI_KEY / OPENAI / GROQ keys)';
+    return result;
+  }
 
   const docVecs = embedded.docVecs, docNorms = embedded.docNorms, items = embedded.items;
 
