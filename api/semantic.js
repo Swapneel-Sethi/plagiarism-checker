@@ -77,28 +77,176 @@ function splitSourcePassages(text) {
 
 // Fail-fast embed of a single text. Throws on persistent quota/network failure
 // --- Groq fallback helpers start ---
+const STOPWORDS = new Set(('a an the and or but if then else for to of in on at by with from into over under this that these those is are was were be been being it its as we you they he she them our your their i me my mine our ours your yours their theirs can will would should could may might must do does did has have had not no nor so than too very just also about up down out off only own same such s t re ll ve d m o re y').split(' '));
+
+function contentWords(s) {
+  return (s || '').toLowerCase().split(/[^a-z0-9]+/).filter(function (w) {
+    return w.length >= 4 && !STOPWORDS.has(w);
+  });
+}
+
+// Pick a real *text-chat* Groq model. The live catalog mixes in audio/voice
+// (orpheus, whisper), embedding, and compound-router models that are useless
+// for our strict YES/NO classification, so we pin a curated preference list and
+// only fall back to the catalog when those are gone.
+const GROQ_CHAT_PREF = [
+  'openai/gpt-oss-20b',
+  'qwen/qwen3.6-27b',
+  'allam-2-7b'
+];
+
 async function pickGroqModel(key) {
   const resp = await fetch('https://api.groq.com/openai/v1/models', {
     headers: { Authorization: `Bearer ${key}` }
   });
   if (!resp.ok) throw new Error('Groq model list fetch failed');
   const data = await resp.json();
-  const candidate = data.data.find(m => !m.id.includes('guard') && !m.id.includes('whisper'));
-  return candidate ? candidate.id : null;
+  const ids = (data.data || []).map(function (m) { return m.id; });
+  const bad = /(embed|guard|whisper|orpheus|tts|audio|distil|compound|mixtral|llama-3\.1|gemma)/i;
+  const live = ids.filter(function (id) { return !bad.test(id); });
+  for (let i = 0; i < GROQ_CHAT_PREF.length; i++) {
+    if (live.indexOf(GROQ_CHAT_PREF[i]) >= 0) return GROQ_CHAT_PREF[i];
+  }
+  return live[0] || null;
 }
 
+// Groq's free tier rate-limits hard. Retry on 429 / 5xx / network errors with
+// exponential backoff so a transient limit doesn't silently drop a chunk.
 async function groqChatCompletion(messages, key, model) {
-  const payload = { model, messages, max_tokens: 500 };
-  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${key}`
-    },
-    body: JSON.stringify(payload)
-  });
-  if (!resp.ok) throw new Error('Groq chat failed: ' + resp.status);
-  return await resp.json();
+  const payload = { model: model, messages: messages, max_tokens: 400, temperature: 0 };
+  let lastErr = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${key}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (resp.ok) {
+        const j = await resp.json();
+        const msg = j.choices && j.choices[0] && j.choices[0].message;
+        // Reasoning models (gpt-oss) sometimes emit the verdict only inside a
+        // `reasoning` field with empty `content`; fall back to it so the parse
+        // step still sees the answer. Treat a fully empty response as retryable
+        // (Groq occasionally returns a blank 200 under rate pressure).
+        const content = (msg && (msg.content || msg.reasoning) || '').trim();
+        if (!content) throw new Error('Groq chat returned empty content');
+        return content;
+      }
+      if (resp.status === 429 || resp.status >= 500) {
+        lastErr = new Error('Groq chat failed: ' + resp.status);
+        await new Promise(function (r) { setTimeout(r, 1000 * Math.pow(2, attempt)); });
+        continue;
+      }
+      throw new Error('Groq chat failed: ' + resp.status);
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 3) { await new Promise(function (r) { setTimeout(r, 1000 * Math.pow(2, attempt)); }); continue; }
+      throw e;
+    }
+  }
+  throw lastErr || new Error('Groq chat failed');
+}
+
+// Semantic fallback that uses a Groq *chat* model instead of embeddings (the
+// embedding endpoints for gemini/opencode/groq are all unavailable in this
+// environment). For each chunk of document sentences we hand the model the
+// top candidate source passages (by content-word overlap) and ask it to flag
+// any sentence that paraphrases / near-copies a passage. Best-effort: any
+// failure returns empty spans and never blocks the report.
+async function groqChatSemantic(docSents, sources, key) {
+  const out = { spans: [], perSource: {}, provider: 'groq-chat', status: 'ok' };
+  if (!docSents.length || !sources.length) return out;
+
+  const model = await pickGroqModel(key);
+  if (!model) { out.status = 'unavailable'; out.reason = 'no Groq chat model available'; return out; }
+
+  const passages = [];
+  for (let si = 0; si < sources.length; si++) {
+    const ps = splitSourcePassages(sources[si].text || '');
+    for (let p = 0; p < ps.length; p++) passages.push({ text: ps[p], title: sources[si].title });
+  }
+  if (!passages.length) return out;
+
+  const CHUNK = 8, CONC = 2, TOP = 5;
+  const chunks = [];
+  for (let i = 0; i < docSents.length; i += CHUNK) chunks.push(docSents.slice(i, i + CHUNK));
+
+  // Select the top-N source passages (by content-word overlap) for one chunk,
+  // then build the prompt and a parallel parse mapping from those same passages.
+  function selectFor(chunk) {
+    const chunkWords = new Set();
+    chunk.forEach(function (s) { contentWords(s.text).forEach(function (w) { chunkWords.add(w); }); });
+    return passages.map(function (pg, idx) {
+      const w = contentWords(pg.text);
+      let ov = 0; const seen = new Set();
+      w.forEach(function (t) { if (chunkWords.has(t) && !seen.has(t)) { seen.add(t); ov++; } });
+      return { idx: idx, ov: ov };
+    }).filter(function (x) { return x.ov > 0; })
+      .sort(function (a, b) { return b.ov - a.ov; })
+      .slice(0, TOP)
+      .map(function (x) { return passages[x.idx]; });
+  }
+
+  function buildPrompt(chunk, sel) {
+    const sentLines = chunk.map(function (s, i) { return (i + 1) + '. ' + s.text; }).join('\n');
+    const pasgLines = sel.map(function (p, i) { return 'P' + (i + 1) + ' [' + p.title + ']: ' + p.text; }).join('\n\n');
+    return [
+      { role: 'system', content: 'You are a plagiarism detector. You are given numbered sentences and several source passages labeled P1..Pn. For each sentence, decide if it is a paraphrase or near-copy of ANY passage (same idea, even if the words differ). Reply ONLY with one line per sentence in this exact format: "<n>: YES P<k>" if it paraphrases passage Pk, or "<n>: NO" if it does not. Do not explain. Do not add extra text.' },
+      { role: 'user', content: 'SENTENCES:\n' + sentLines + '\n\nPASSAGES:\n' + pasgLines }
+    ];
+  }
+
+  function parse(chunk, sel, resp) {
+    if (!resp) return;
+    // Drop <think>...</think> wrappers some models emit before the verdict.
+    let text = resp.replace(/<think>[\s\S]*?<\/think>/gi, ' ');
+    const lines = text.split(/\n+/);
+    // Strict: "1: YES P2"  /  "1: YES P2 (note)"
+    const re = /^(\d+)\s*:\s*YES\s*P(\d+)/i;
+    // Loose fallback: any line containing a sentence number, YES, and a passage.
+    const reLoose = /(\d+)\b[^\n]*\bYES\b[^\n]*P(\d+)/i;
+    let found = false;
+    for (let i = 0; i < lines.length; i++) {
+      let m = lines[i].match(re);
+      if (!m) m = lines[i].match(reLoose);
+      if (!m) continue;
+      const sIdx = parseInt(m[1], 10) - 1;
+      const pIdx = parseInt(m[2], 10) - 1;
+      if (sIdx < 0 || sIdx >= chunk.length) continue;
+      const pg = sel[pIdx];
+      if (!pg) continue;
+      out.spans.push({ start: chunk[sIdx].start, end: chunk[sIdx].end, title: pg.title });
+      out.perSource[pg.title] = (out.perSource[pg.title] || 0) + 1;
+      found = true;
+    }
+    return found;
+  }
+
+  let done = 0;
+  while (done < chunks.length) {
+    const slice = chunks.slice(done, done + CONC);
+    await Promise.all(slice.map(function (chunk) {
+      return (async function () {
+        try {
+          const sel = selectFor(chunk);
+          if (!sel.length) return;
+          const resp = await groqChatCompletion(buildPrompt(chunk, sel), key, model);
+          parse(chunk, sel, resp);
+        } catch (e) {
+          process.stderr.write('groqChatSemantic chunk failed: ' + (e && e.message) + '\n');
+        }
+      })();
+    }));
+    done += CONC;
+    if (done < chunks.length) await new Promise(function (r) { setTimeout(r, 300); });
+  }
+
+  out.coveragePct = out.spans.length ? (out.spans.length / docSents.length) * 100 : 0;
+  return out;
 }
 // --- Groq fallback helpers end ---
 
@@ -151,8 +299,11 @@ async function embedOne(text, key) {
         const j = await r.json();
         return (j.embedding && j.embedding.values) ? j.embedding.values : [];
       }
-      // Quota / server errors: retry once briefly, then give up loudly.
-      if (r.status === 429 || r.status >= 500) {
+      // Quota (429) is a hard block for this period — retrying won't help, so
+      // fail fast and let the caller drop to the next provider / Groq fallback.
+      // Transient 5xx is worth one brief retry.
+      if (r.status === 429) throw new Error('EMBED_QUOTA');
+      if (r.status >= 500) {
         if (a < tries - 1) { await new Promise(function (res) { setTimeout(res, 700 * (a + 1)); }); continue; }
         throw new Error('EMBED_QUOTA');
       }
@@ -249,6 +400,24 @@ async function semanticMatches(text, sources, key, skipRanges) {
     }
   }
   if (!embedded) {
+    // All embedding providers are down (gemini quota, opencode/groq have no
+    // embeddings). Fall back to a Groq CHAT model that classifies reworded
+    // plagiarism directly. Best-effort — if it also fails we just report
+    // nothing rather than blocking the analysis.
+    if (process.env.GROQ_API_KEY) {
+      try {
+        const fb = await groqChatSemantic(docSents, sources, process.env.GROQ_API_KEY);
+        result.spans = fb.spans;
+        result.perSource = fb.perSource;
+        result.coveragePct = fb.coveragePct;
+        result.provider = fb.provider;
+        result.status = fb.status;
+        result.reason = fb.reason || null;
+        return result;
+      } catch (e) {
+        process.stderr.write('groqChatSemantic fallback failed: ' + (e && e.message) + '\n');
+      }
+    }
     result.status = 'unavailable';
     result.reason = 'all embedding providers failed (check GEMINI_KEY / OPENAI / GROQ keys)';
     return result;
@@ -287,3 +456,4 @@ module.exports = {
 // Export Groq helpers for fallback use
 module.exports.pickGroqModel = pickGroqModel;
 module.exports.groqChatCompletion = groqChatCompletion;
+module.exports.groqChatSemantic = groqChatSemantic;

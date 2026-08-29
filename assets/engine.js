@@ -405,12 +405,12 @@
     // Weights sum to 1.0 so the index reads directly as a 0-100 likelihood.
     var CFG = (typeof PE !== 'undefined' ? PE._CFG : null) || null;
     var W = (CFG && CFG.weights) || {
-      'LLM TELL PHRASES': 0.200,
-      'HEDGE / BOILERPLATE PHRASES': 0.160,
-      'BURSTINESS (sentence-length variance)': 0.180,
-      'FUNCTION-WORD DENSITY': 0.120,
-      'PERSONAL VOICE ABSENCE': 0.140,
-      'ABSTRACT / AI-NOUN DENSITY': 0.200
+      'LLM TELL PHRASES': 0.180,
+      'HEDGE / BOILERPLATE PHRASES': 0.140,
+      'BURSTINESS (sentence-length variance)': 0.240,
+      'FUNCTION-WORD DENSITY': 0.100,
+      'PERSONAL VOICE ABSENCE': 0.200,
+      'ABSTRACT / AI-NOUN DENSITY': 0.140
     };
     var wsum = 0, acc = 0;
     params.forEach(function (p) {
