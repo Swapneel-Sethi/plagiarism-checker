@@ -1,15 +1,14 @@
 /*
- * End-to-end test harness for the Plagiarism / AI-writing / Originality engine.
+ * End-to-end test harness for the Plagiarism / AI-writing engine.
  *
  * Loads the SAME detection core the browser uses (assets/engine.js) and the
  * reference corpus (assets/corpus.js), then runs 10 documents of known
- * provenance through PE.fullReport(). For each of the three capabilities we
- * compare the engine's verdict to the labelled ground truth and report accuracy.
+ * provenance through PE.fullReport(). For each capability we compare the
+ * engine's verdict to the labelled ground truth and report accuracy.
  *
  * Decision thresholds (documented, not hidden):
  *   - Plagiarism flagged  if plagiarismPct  >= 20
  *   - AI-writing flagged  if aiIndex        >= 50
- *   - Original            if NOT plagiarized AND NOT AI-written
  *
  * Run:  node e2e_tests.js
  */
@@ -22,11 +21,11 @@ const PLAGIARISM_FLAG = 20; // %
 const AI_FLAG = 50;         // index 0-100
 
 // --- ground-truth documents ------------------------------------------------
-// truth: { plagiarism, ai, original }  (booleans)
+// truth: { plagiarism, ai }  (booleans)
 const TESTS = [
   {
     name: 'T1  Verbatim copy of corpus doc (Computation)',
-    truth: { plagiarism: true, ai: false, original: false },
+    truth: { plagiarism: true, ai: false },
     text:
       'Computation is the mechanical manipulation of symbols according to a fixed set of rules. ' +
       'A computer, in the broadest sense, is any system that can represent information and transform that representation through deterministic steps. ' +
@@ -34,7 +33,7 @@ const TESTS = [
   },
   {
     name: 'T2  Original human narrative (first person, varied)',
-    truth: { plagiarism: false, ai: false, original: true },
+    truth: { plagiarism: false, ai: false },
     text:
       'Last summer my brother and I drove across the state to visit our grandmother. ' +
       'We got lost twice, ate terrible gas-station tacos, and somehow ended up on a ferry we never meant to take. ' +
@@ -43,7 +42,7 @@ const TESTS = [
   },
   {
     name: 'T3  LLM-tell-laden AI text (delve/realm/tapestry…)',
-    truth: { plagiarism: false, ai: true, original: false },
+    truth: { plagiarism: false, ai: true },
     text:
       'It is important to note that the realm of modern technology presents a multifaceted tapestry. ' +
       'We must delve into the complexities of this ever-evolving landscape. ' +
@@ -52,7 +51,7 @@ const TESTS = [
   },
   {
     name: 'T4  Paraphrase of corpus doc (Climate/carbon cycle)',
-    truth: { plagiarism: true, ai: false, original: false },
+    truth: { plagiarism: true, ai: false },
     text:
       'Carbon moves between the sky, the seas, and all living things in what scientists call the carbon cycle. ' +
       'People have upset that balance by freeing carbon that stayed buried in rock for ages. ' +
@@ -61,7 +60,7 @@ const TESTS = [
   },
   {
     name: 'T5  Uniform mechanical AI text (no obvious tells)',
-    truth: { plagiarism: false, ai: true, original: false },
+    truth: { plagiarism: false, ai: true },
     text:
       'Machine learning models process data through layers of weighted connections. ' +
       'These models adjust their parameters during training to reduce prediction error. ' +
@@ -71,7 +70,7 @@ const TESTS = [
   },
   {
     name: 'T6  Mixed verbatim + original (Libraries)',
-    truth: { plagiarism: true, ai: false, original: false },
+    truth: { plagiarism: true, ai: false },
     text:
       'Libraries began as collections of clay tablets and scrolls guarded by priests and kings who alone could read them. ' +
       'With the spread of paper and the printing press, books ceased to be rare objects and became instruments of ordinary education. ' +
@@ -79,7 +78,7 @@ const TESTS = [
   },
   {
     name: 'T7  Verbatim Gettysburg Address (corpus doc)',
-    truth: { plagiarism: true, ai: false, original: false },
+    truth: { plagiarism: true, ai: false },
     text:
       'The Gettysburg Address is a dedication speech delivered by Abraham Lincoln, the 16th U.S. president, following the Battle of Gettysburg during the American Civil War. ' +
       'The speech has come to be viewed as one of the most famous, enduring, and historically significant speeches in American history. ' +
@@ -87,7 +86,7 @@ const TESTS = [
   },
   {
     name: 'T8  Human blog voice (colloquial, contractions)',
-    truth: { plagiarism: false, ai: false, original: true },
+    truth: { plagiarism: false, ai: false },
     text:
       'So I tried the new ramen place downtown, right? ' +
       'The broth was unreal — like, deeply savory in a way I didn\'t expect from a strip-mall spot. ' +
@@ -96,12 +95,12 @@ const TESTS = [
   },
   {
     name: 'T9  Very short text (edge case, <10 words)',
-    truth: { plagiarism: false, ai: false, original: true },
+    truth: { plagiarism: false, ai: false },
     text: 'I love my cat and her tiny paws.'
   },
   {
     name: 'T10 Empty / whitespace input (edge case)',
-    truth: { plagiarism: false, ai: false, original: true },
+    truth: { plagiarism: false, ai: false },
     text: '    '
   }
 ];
@@ -109,20 +108,20 @@ const TESTS = [
 function verdict(r) {
   const plag = r.plagiarismPct >= PLAGIARISM_FLAG;
   const ai = r.aiIndex >= AI_FLAG;
-  return { plag, ai, original: !plag && !ai };
+  return { plag, ai };
 }
 
 // --- run ----------------------------------------------------------------
-const dim = { plagiarism: 0, ai: 0, original: 0 };
+const dim = { plagiarism: 0, ai: 0 };
 const total = TESTS.length;
-let passAll = 0;
+let passBoth = 0;
 
-console.log('=== Plagiarism / AI-writing / Originality — 10 end-to-end tests ===\n');
+console.log('=== Plagiarism / AI-writing — 10 end-to-end tests ===\n');
 console.log(
   'TEST'.padEnd(46) +
   'PLAG%'.padStart(7) +
   'AI'.padStart(5) +
-  '  verdict (P/A/O)  vs truth'
+  '  verdict (P/A)  vs truth'
 );
 console.log('-'.repeat(100));
 
@@ -135,17 +134,15 @@ TESTS.forEach((t) => {
   } catch (e) {
     crashed = true;
     r = { plagiarismPct: NaN, aiIndex: NaN };
-    v = { plag: false, ai: false, original: true };
+    v = { plag: false, ai: false };
   }
-  const got = (v.plag ? 'P' : '.') + (v.ai ? 'A' : '.') + (v.original ? 'O' : '.');
-  const want = (t.truth.plagiarism ? 'P' : '.') + (t.truth.ai ? 'A' : '.') + (t.truth.original ? 'O' : '.');
+  const got = (v.plag ? 'P' : '.') + (v.ai ? 'A' : '.');
+  const want = (t.truth.plagiarism ? 'P' : '.') + (t.truth.ai ? 'A' : '.');
   const okP = v.plag === t.truth.plagiarism;
   const okA = v.ai === t.truth.ai;
-  const okO = v.original === t.truth.original;
   if (okP) dim.plagiarism++;
   if (okA) dim.ai++;
-  if (okO) dim.original++;
-  if (okP && okA && okO) passAll++;
+  if (okP && okA) passBoth++;
 
   const pct = Number.isNaN(r.plagiarismPct) ? 'ERR' : r.plagiarismPct.toFixed(1);
   const ai = Number.isNaN(r.aiIndex) ? 'ERR' : String(r.aiIndex);
@@ -163,6 +160,5 @@ const acc = (n) => ((n / total) * 100).toFixed(1) + '%';
 console.log('\n=== ACCURACY (verdict vs labelled ground truth) ===');
 console.log('  Checking Plagiarism : ' + dim.plagiarism + '/' + total + '  = ' + acc(dim.plagiarism));
 console.log('  AI Writing          : ' + dim.ai + '/' + total + '  = ' + acc(dim.ai));
-console.log('  Originality         : ' + dim.original + '/' + total + '  = ' + acc(dim.original));
-console.log('  All-three correct   : ' + passAll + '/' + total + '  = ' + acc(passAll));
-console.log('\nThresholds: Plagiarism >= ' + PLAGIARISM_FLAG + '%, AI index >= ' + AI_FLAG + ', Original = not-plagiarized & not-AI.');
+console.log('  Both correct        : ' + passBoth + '/' + total + '  = ' + acc(passBoth));
+console.log('\nThresholds: Plagiarism >= ' + PLAGIARISM_FLAG + '%, AI index >= ' + AI_FLAG + '.');

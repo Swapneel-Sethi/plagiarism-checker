@@ -185,13 +185,11 @@
   function renderReport(rep, corpusCount, webNote) {
     var plag = rep.plagiarismPct.toFixed(1);
     var ai = rep.aiIndex.toFixed(0);
-    var orig = Math.max(0, 100 - Math.max(rep.plagiarismPct, rep.aiIndex)).toFixed(1);
 
     var html = '';
     html += '<div class="result-head">';
     html += '<div class="metric"><span class="num">' + plag + '%</span><span class="mlabel">Plagiarism</span></div>';
     html += '<div class="metric"><span class="num">' + ai + '%</span><span class="mlabel">AI-writing index</span></div>';
-    html += '<div class="metric"><span class="num">' + orig + '%</span><span class="mlabel">Originality</span></div>';
     html += '</div>';
     html += '<p class="caption">' + rep.wordCount + ' words \u00b7 ' + rep.docShingleCount + ' shingles \u00b7 ' + (corpusCount || corpus.length) + ' reference docs</p>';
 
