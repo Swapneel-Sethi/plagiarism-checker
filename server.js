@@ -113,7 +113,7 @@ const server = http.createServer(async (req, res) => {
         if (text.length < 20) { res.end(JSON.stringify({ error: 'text too short' })); return; }
 
         const apiKey = (data.key || process.env.SERPAPI_KEY || '').trim();
-        const doWeb = data.scanWeb !== false;
+        const doWeb = true; // web scan is always on
         const gk = process.env.GEMINI_KEY;
         let sources = CORPUS.slice();
         let notice = '';

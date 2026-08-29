@@ -38,7 +38,7 @@ async function post(text) {
   try {
     const r = await fetch(BASE + '/api/analyze', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, scanWeb: false }), signal: ctrl.signal
+      body: JSON.stringify({ text, scanWeb: true }), signal: ctrl.signal
     });
     return await r.json();
   } finally { clearTimeout(t); }

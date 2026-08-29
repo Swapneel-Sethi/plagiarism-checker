@@ -25,9 +25,9 @@ node server.js
 # then open http://localhost:3000
 ```
 
-Tick **SCAN THE WEB** in the Submit section. For reliable scanning, paste your
-SerpAPI key into the **SERPAPI KEY** box (saved in your browser, sent only to this
-local server) — or launch with `node server.js YOUR_KEY`. The backend searches the
+Web scanning is **always on** (the toggle in the Submit section is locked). For
+reliable scanning, paste your SerpAPI key into the **SERPAPI KEY** box (saved in your
+browser, sent only to this local server) — or launch with `node server.js YOUR_KEY`. The backend searches the
 web for distinctive sentences from your document, fetches the top result pages,
 extracts their text, and feeds those pages into the same `engine.js` shingle-
 containment logic — so web matches show up in the same report as local ones.
@@ -62,9 +62,9 @@ to the same relative path, so no code changes are needed.
    ```bash
    npx vercel --prod
    ```
-4. Open the deployed URL, tick **SCAN THE WEB**, hit **RUN ANALYSIS**. Web
-   scanning now runs through the function using the `SERPAPI_KEY` env var — the
-   in-page key box still works as an override if you prefer.
+4. Open the deployed URL and hit **RUN ANALYSIS**. Web scanning is always on and
+   runs through the function using the `SERPAPI_KEY` env var — the in-page key box
+   still works as an override if you prefer.
 
 `vercel.json` sets the function timeout to 30s (web fetch + text extraction can
 take a few seconds). The local `server.js` is kept for `node server.js` dev use

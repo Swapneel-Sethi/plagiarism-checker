@@ -41,7 +41,7 @@
   var reportEl = $('#report');
   var analyzeBtn = $('#analyze');
   var scanWeb = $('#scanWeb');
-  scanWeb.checked = true; // web scanning on by default
+  scanWeb.checked = true; // toggle is locked on; web scan always runs server-side
   var serpKey = $('#serpKey');
   serpKey.value = localStorage.getItem('pc_serpkey') || '';
   serpKey.addEventListener('input', function () {
@@ -167,7 +167,7 @@
       var r = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, key: serpKey.value.trim(), scanWeb: scanWeb.checked })
+        body: JSON.stringify({ text: text, key: serpKey.value.trim(), scanWeb: true })
       });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       var rep = await r.json();

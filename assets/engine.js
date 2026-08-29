@@ -380,31 +380,32 @@
       { label: 'LLM TELL PHRASES', raw: tellPer100.toFixed(2) + ' /100w', score: clamp(tellPer100 / 2, 0, 1), note: '"delve", "tapestry", "realm", "crucial role"…' },
       { label: 'HEDGE / BOILERPLATE PHRASES', raw: hedgePer100.toFixed(2) + ' /100w', score: clamp(hedgePer100 / 2, 0, 1), note: '"it is important to note", "plays a role", etc.' },
       { label: 'FUNCTION-WORD DENSITY', raw: (funcDensity * 100).toFixed(1) + '%', score: clamp((0.45 - funcDensity) / 0.15, 0, 1), note: 'Low connective load → over-dense phrasing' },
-      { label: 'ABSTRACT / AI-NOUN DENSITY', raw: absDensity.toFixed(1) + ' /100w', score: clamp(absDensity / 20, 0, 1), note: 'Overuse of vague abstract nouns → AI-style vagueness' },
+      { label: 'ABSTRACT / AI-NOUN DENSITY', raw: absDensity.toFixed(1) + ' /100w', score: clamp(absDensity / 15, 0, 1), note: 'Overuse of vague abstract nouns → AI-style vagueness' },
       { label: 'COMMA DENSITY', raw: commaDensity.toFixed(1) + ' /100w', score: clamp((commaDensity - 10) / 12, 0, 1), note: 'Very high → over-structured sentences' },
       { label: 'AVG WORD LENGTH', raw: avgWordLen.toFixed(2) + ' ch', score: clamp((3.0 - avgWordLen) / 1.4, 0, 1), note: 'Short words cluster → simplified diction' }
     ];
 
-    // Ensemble index. AI-specific lexical tells (LLM-tell + hedge phrases) lead,
-    // backed by abstract-noun density (a strong tell-FREE signal — catches uniform
-    // mechanical AI like T5 that has no "delve/tapestry" tells) and rhythm signals
-    // (burstiness, function-word density, vocab diversity). Personal-voice-absence
-    // is a MODEST weight (0.078) on purpose: it is the dominant humanization signal
-    // (adding "I/we/my" is what humanizer tools do), so without it the index feels
-    // "stuck" when a text is humanized by voice alone. It stays small so formal human
-    // text (Gettysburg/Computation) remains below the 50% cutoff.
+    // Ensemble index. Weighted toward the parameters that actually separate AI from
+    // human writing on real text. The earlier build also weighted TYPE-TOKEN RATIO and
+    // REPEATED 4-GRAM RATIO, but those score HIGHER for human text than AI text (an
+    // inverted signal) and dragged AI samples under the 50 cutoff — e.g. formal AI
+    // prose landed at 48 and tell-free technical AI at 32, both misclassified as human.
+    // They are dropped. The surviving six are all genuinely AI-favoring:
+    //   - LLM-TELL / HEDGE phrases: explicit model boilerplate
+    //   - BURSTINESS: low sentence-length variance = machine uniformity
+    //   - FUNCTION-WORD DENSITY: dense, connective-light phrasing
+    //   - PERSONAL VOICE ABSENCE: impersonal framing (also the main humanizer lever,
+    //     so it stays a moderate weight — raising it makes the index feel "stuck")
+    //   - ABSTRACT/AI-NOUN DENSITY: vague high-level nouns (tell-free AI signal)
+    // Weights sum to 1.0 so the index reads directly as a 0-100 likelihood.
     var CFG = (typeof PE !== 'undefined' ? PE._CFG : null) || null;
     var W = (CFG && CFG.weights) || {
-      'LLM TELL PHRASES': 0.203,
-      'HEDGE / BOILERPLATE PHRASES': 0.156,
-      'BURSTINESS (sentence-length variance)': 0.125,
-      'FUNCTION-WORD DENSITY': 0.094,
-      'PERSONAL VOICE ABSENCE': 0.078,
-      'ABSTRACT / AI-NOUN DENSITY': 0.180,
-      'TYPE-TOKEN RATIO': 0.055,
-      'REPEATED 4-GRAM RATIO': 0.039,
-      'COMMA DENSITY': 0.016,
-      'AVG WORD LENGTH': 0.016
+      'LLM TELL PHRASES': 0.200,
+      'HEDGE / BOILERPLATE PHRASES': 0.160,
+      'BURSTINESS (sentence-length variance)': 0.180,
+      'FUNCTION-WORD DENSITY': 0.120,
+      'PERSONAL VOICE ABSENCE': 0.140,
+      'ABSTRACT / AI-NOUN DENSITY': 0.200
     };
     var wsum = 0, acc = 0;
     params.forEach(function (p) {
