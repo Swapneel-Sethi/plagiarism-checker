@@ -1,6 +1,10 @@
 /*
- * UI wiring for the plagiarism checker. Vanilla JS, no build step.
- * Depends on globals: PE (engine.js), CORPUS (corpus.js).
+ * UI wiring for the INTEGRITY FORGE plagiarism / AI-writing scanner.
+ * Vanilla JS, no build step. Depends on globals: PE (engine.js), CORPUS (corpus.js).
+ *
+ * POST /api/analyze  { text, key?, scanWeb: true }
+ *   ->  { plagiarismPct, aiIndex, perSource, html, aiParams, wordCount,
+ *          docShingleCount, corpusCount, webNote, error }
  */
 (function () {
   'use strict';
@@ -17,8 +21,6 @@
   }
 
   // ---- served-over-file warning ----
-  // The web backend (/api/web-sources) only works over http(s). Opening
-  // index.html directly (file://) silently skips the web scan. Warn the user.
   function showBanner(msg) {
     var b = document.getElementById('banner');
     if (!b) {
@@ -31,7 +33,7 @@
     b.hidden = false;
   }
   if (location.protocol === 'file:') {
-    showBanner('Opening this page directly as a file won\u2019t let it scan the web. Run "node server.js" and open http://localhost:3000, or use the deployed link.');
+    showBanner('Opening this page directly as a file won’t let it scan the web. Run "node server.js" and open http://localhost:3000, or use the deployed link.');
   }
 
   var input = $('#input');
@@ -41,17 +43,18 @@
   var reportEl = $('#report');
   var analyzeBtn = $('#analyze');
   var scanWeb = $('#scanWeb');
-  scanWeb.checked = true; // toggle is locked on; web scan always runs server-side
+  if (scanWeb) scanWeb.checked = true; // toggle is locked on; web scan always runs server-side
   var serpKey = $('#serpKey');
-  serpKey.value = localStorage.getItem('pc_serpkey') || '';
-  serpKey.addEventListener('input', function () {
-    localStorage.setItem('pc_serpkey', serpKey.value.trim());
-  });
+  if (serpKey) {
+    serpKey.value = localStorage.getItem('pc_serpkey') || '';
+    serpKey.addEventListener('input', function () {
+      localStorage.setItem('pc_serpkey', serpKey.value.trim());
+    });
+  }
 
   // ---- corpus state (seed + user docs from localStorage) ----
   var corpus = (window.CORPUS || []).slice();
   loadUserCorpus();
-
   function loadUserCorpus() {
     try {
       var raw = localStorage.getItem('pc_corpus');
@@ -64,27 +67,19 @@
   }
 
   // ---- char count ----
-  input.addEventListener('input', function () {
-    charCount.textContent = input.value.length + ' characters';
-  });
+  if (input) {
+    input.addEventListener('input', function () {
+      charCount.textContent = input.value.length + ' characters';
+    });
+  }
 
   // ---- file handling ----
-  $('#loadFile').addEventListener('click', function () { fileInput.click(); });
-  $('#nav-upload').addEventListener('click', function (e) {
-    e.preventDefault();
-    document.getElementById('check').scrollIntoView({ behavior: 'smooth' });
-    fileInput.click();
-  });
-  $('#hero-check').addEventListener('click', function () {
-    document.getElementById('check').scrollIntoView({ behavior: 'smooth' });
-    input.focus();
-  });
-
-  fileInput.addEventListener('change', function (e) {
+  function bindIf(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
+  bindIf($('#loadFile'), 'click', function () { if (fileInput) fileInput.click(); });
+  bindIf(fileInput, 'change', function (e) {
     if (e.target.files[0]) readFile(e.target.files[0]);
   });
 
-  // Heuristic: is this text actually binary (Word/PDF) rather than plain text?
   function looksBinary(str) {
     if (str.indexOf(String.fromCharCode(0)) !== -1) return true;
     var sample = str.slice(0, 8000), nonPrint = 0;
@@ -94,16 +89,14 @@
     }
     return (nonPrint / sample.length) > 0.1;
   }
-
   function setDocText(t) {
     input.value = t;
     charCount.textContent = input.value.length + ' characters';
   }
   function showUnsupported() {
     input.value = '';
-    charCount.textContent = 'Can\u2019t read this file — paste text or save as .txt';
+    charCount.textContent = 'Can’t read this file — paste text or save as .txt';
   }
-
   function readFile(f) {
     var name = (f.name || '').toLowerCase();
     if (name.indexOf('.pdf') !== -1) return readPdf(f);
@@ -116,7 +109,6 @@
     r.onerror = function () { charCount.textContent = 'File read error'; };
     r.readAsText(f);
   }
-
   async function readDocx(f) {
     if (!window.mammoth) { showUnsupported(); return; }
     try {
@@ -125,7 +117,6 @@
       setDocText(res.value || '');
     } catch (e) { showUnsupported(); }
   }
-
   async function readPdf(f) {
     if (!window.pdfjsLib) { showUnsupported(); return; }
     try {
@@ -142,43 +133,44 @@
   }
 
   // ---- drag & drop ----
-  ['dragover', 'dragenter'].forEach(function (ev) {
-    dropzone.addEventListener(ev, function (e) { e.preventDefault(); dropzone.classList.add('drag'); });
-  });
-  ['dragleave', 'drop'].forEach(function (ev) {
-    dropzone.addEventListener(ev, function (e) { e.preventDefault(); dropzone.classList.remove('drag'); });
-  });
-  dropzone.addEventListener('drop', function (e) {
-    if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
-  });
+  if (dropzone) {
+    ['dragover', 'dragenter'].forEach(function (ev) {
+      dropzone.addEventListener(ev, function (e) { e.preventDefault(); dropzone.classList.add('drag'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      dropzone.addEventListener(ev, function (e) { e.preventDefault(); dropzone.classList.remove('drag'); });
+    });
+    dropzone.addEventListener('drop', function (e) {
+      if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+    });
+  }
 
   // ---- analyze ----
-  analyzeBtn.addEventListener('click', function () {
+  bindIf(analyzeBtn, 'click', function () {
     var text = input.value.trim();
     if (text.length < 20) { charCount.textContent = 'Need at least 20 characters'; return; }
-    analyzeBtn.textContent = 'Analyzing\u2026';
     analyze();
   });
 
   async function analyze() {
     var text = input.value.trim();
-    analyzeBtn.textContent = 'Analyzing\u2026';
+    if (analyzeBtn) analyzeBtn.textContent = 'Analyzing…';
     try {
       var r = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, key: serpKey.value.trim(), scanWeb: true })
+        body: JSON.stringify({ text: text, key: serpKey ? serpKey.value.trim() : '', scanWeb: true })
       });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       var rep = await r.json();
       if (rep.error) { charCount.textContent = rep.error; return; }
       renderReport(rep, rep.corpusCount || corpus.length, rep.webNote || '');
       reportEl.hidden = false;
-      reportEl.scrollIntoView({ behavior: 'sleep' });
+      reportEl.scrollIntoView({ behavior: 'smooth' });
     } catch (e) {
       charCount.textContent = 'Analysis failed — ' + (e.message || e) + (location.protocol === 'file:' ? ' (page opened as a file — try http://localhost:3000)' : '');
     } finally {
-      analyzeBtn.textContent = 'Run analysis';
+      if (analyzeBtn) analyzeBtn.textContent = 'Run analysis';
     }
   }
 
@@ -187,41 +179,40 @@
     var ai = rep.aiIndex.toFixed(0);
 
     var html = '';
-    html += '<div class="result-head">';
-    html += '<div class="metric"><span class="num">' + plag + '%</span><span class="mlabel">Plagiarism</span></div>';
-    html += '<div class="metric"><span class="num">' + ai + '%</span><span class="mlabel">AI-writing index</span></div>';
-    html += '</div>';
-    html += '<p class="caption">' + rep.wordCount + ' words \u00b7 ' + rep.docShingleCount + ' shingles \u00b7 ' + (corpusCount || corpus.length) + ' reference docs</p>';
+    html += '<div class="info-card p-8 reveal in-view">';
+    html += '  <div class="section-marker mb-6"><span>// Result</span></div>';
+    html += '  <div class="result-head">';
+    html += '    <div class="metric"><span class="num">' + plag + '%</span><span class="mlabel">Plagiarism</span></div>';
+    html += '    <div class="metric ai"><span class="num">' + ai + '%</span><span class="mlabel">AI-writing index</span></div>';
+    html += '  </div>';
+    html += '  <p class="caption">' + rep.wordCount + ' words · ' + rep.docShingleCount + ' shingles · ' + (corpusCount || corpus.length) + ' reference docs</p>';
 
-    html += '<h3 class="heading-sm">Matched sources</h3>';
-    if (rep.perSource.length) {
-      html += '<ul class="sources">';
+    html += '  <h3>Matched sources</h3>';
+    if (rep.perSource && rep.perSource.length) {
+      html += '  <ul class="sources">';
       rep.perSource.forEach(function (s) {
         var tag = s.type === 'paraphrase' ? '<span class="src-type paraphrase">Paraphrase</span>' : '<span class="src-type">Verbatim</span>';
-        html += '<li><span class="src-title">' + escapeHtml(s.title) + '</span>' + tag + '<span class="src-pct">' + s.pct.toFixed(1) + '%</span></li>';
+        html += '  <li><span class="src-title">' + escapeHtml(s.title) + '</span>' + tag + '<span class="src-pct">' + s.pct.toFixed(1) + '%</span></li>';
       });
-      html += '</ul>';
+      html += '  </ul>';
     } else {
-      html += '<p class="caption">No overlap with reference corpus</p>';
+      html += '  <p class="caption">No overlap with reference corpus</p>';
     }
-    html += '<p class="caption disclaimer">Verbatim = word-for-word match. Paraphrase = reworded text sharing the source\u2019s vocabulary (TF-IDF cosine \u2265 0.50). Plagiarism % = share of the document covered by either. Heavily reworded paraphrase can still read as original.</p>';
+    html += '  <p class="caption disclaimer">Verbatim = word-for-word match. Paraphrase = reworded text sharing the source’s vocabulary (TF‑IDF cosine ≥ 0.50). Plagiarism % = share of the document covered by either.</p>';
 
-    html += '<h3 class="heading-sm">Stylometric parameters</h3>';
-    html += '<div class="params">';
+    html += '  <h3>Stylometric parameters</h3>';
+    html += '  <div class="params">';
     rep.aiParams.forEach(function (p) {
-      html += '<div class="param">' +
-        '<div class="param-top"><span>' + escapeHtml(p.label) + '</span><span class="param-raw">' + escapeHtml(p.raw) + '</span></div>' +
-        '<div class="bar"><i style="width:' + (p.score * 100).toFixed(0) + '%"></i></div>' +
-        '<div class="param-note">' + escapeHtml(p.note) + '</div>' +
-        '</div>';
+      html += '  <div class="param"><div class="param-top"><span>' + escapeHtml(p.label) + '</span><span class="param-raw">' + escapeHtml(p.raw) + '</span></div><div class="bar"><i style="width:' + (p.score * 100).toFixed(0) + '%"></i></div><div class="param-note">' + escapeHtml(p.note) + '</div></div>';
     });
-    html += '</div>';
+    html += '  </div>';
 
-    html += '<h3 class="heading-sm">Document map</h3>';
-    html += '<div class="docmap">' + rep.html + '</div>';
-    html += '<p class="caption">Frost underline = verbatim copy \u00b7 Ash underline = paraphrase / near-copy</p>';
-    html += '<p class="caption disclaimer">Heuristic engine. Web matches come from live Google results. The AI-writing index is a rough estimate, not a certified detector. Plagiarism = copied from a source; AI-writing = machine-generated or spun. Spun text can read ~0% plagiarism yet score high on AI-writing.</p>';
-    if (webNote) html += '<p class="caption disclaimer">' + escapeHtml(webNote) + '</p>';
+    html += '  <h3>Document map</h3>';
+    html += '  <div class="docmap">' + rep.html + '</div>';
+    html += '  <p class="caption">Underline = matched passage · dashed = paraphrase / near-copy.</p>';
+    html += '  <p class="caption disclaimer">Heuristic engine. The AI‑writing index is a rough estimate, not a certified detector. Spun text can read ~0% plagiarism yet score high on AI‑writing.</p>';
+    if (webNote) html += '  <p class="caption disclaimer">' + escapeHtml(webNote) + '</p>';
+    html += '</div>';
 
     reportEl.innerHTML = html;
   }
@@ -230,6 +221,7 @@
   renderCorpus();
   function renderCorpus() {
     var list = $('#corpusList');
+    if (!list) return;
     list.innerHTML = '';
     corpus.forEach(function (d) {
       var li = document.createElement('li');
@@ -237,7 +229,9 @@
       li.innerHTML = '<span class="src-title">' + escapeHtml(d.title) + '</span><span class="src-pct">' + words + ' words</span>';
       if (String(d.id).indexOf('user-') === 0) {
         var rm = document.createElement('button');
-        rm.className = 'btn-mini';
+        rm.className = 'pc-btn';
+        rm.style.padding = '0.3rem 0.7rem';
+        rm.style.fontSize = '11px';
         rm.textContent = 'Remove';
         rm.addEventListener('click', function () {
           corpus = corpus.filter(function (x) { return x.id !== d.id; });
@@ -250,7 +244,7 @@
     });
   }
 
-  $('#addCorpus').addEventListener('click', function () {
+  bindIf($('#addCorpus'), 'click', function () {
     var t = $('#corpusTitle').value.trim() || ('Doc ' + (corpus.length + 1));
     var x = $('#corpusText').value.trim();
     if (x.length < 20) { $('#corpusMsg').textContent = 'Text too short'; return; }
